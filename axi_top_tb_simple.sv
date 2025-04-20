@@ -1,13 +1,17 @@
 module axi_top_tb_simple;
-  // 클럭 및 리셋 신호 - wire 타입으로 선언
-  wire clk;
-  wire rstn;
+  // 클럭 및 리셋 신호
+  bit clk;
+  bit rstn;
   
-  // 클럭 생성기 (별도 모듈)
-  clock_gen clk_gen(.clk(clk));
+  // 클럭 생성
+  always #5 clk = ~clk;  // 100MHz 클럭
   
-  // 리셋 생성기 (별도 모듈)
-  reset_gen rst_gen(.rstn(rstn));
+  // 리셋 생성
+  initial begin
+    rstn = 0;
+    #50;
+    rstn = 1;
+  end
   
   // AXI 인터페이스 인스턴스화
   AXI4 #(.N(8), .I(8)) axi_if(.ACLK(clk), .ARESETn(rstn));
@@ -200,117 +204,45 @@ module axi_top_tb_simple;
   // 시스템 버스 응답 생성 (메모리 모델)
   reg [63:0] memory [0:1023];  // 간단한 메모리 모델
   
-  // 메모리 모델 구현
-  memory_model mem_model(
-    .clk(clk),
-    .rstn(rstn),
-    .addr(sys_addr),
-    .wdata(sys_wdata),
-    .sel(sys_sel),
-    .wen(sys_wen),
-    .ren(sys_ren),
-    .rdata(sys_rdata),
-    .err(sys_err),
-    .ack(sys_ack)
-  );
-  
-  // 기본 테스트 시퀀스
-  test_sequence test_seq(
-    .bfm(master_bfm)
-  );
-  
-  // 파형 생성
+  // 메모리 모델 초기화
   initial begin
-    $dumpfile("axi_tb.vcd");
-    $dumpvars(0, axi_top_tb_simple);
-  end
-  
-endmodule
-
-// 클럭 생성 모듈
-module clock_gen(
-  output bit clk
-);
-  initial begin
-    clk = 0;
-    forever #5 clk = ~clk;  // 100MHz 클럭
-  end
-endmodule
-
-// 리셋 생성 모듈
-module reset_gen(
-  output bit rstn
-);
-  initial begin
-    rstn = 0;
-    #50;
-    rstn = 1;
-  end
-endmodule
-
-// 메모리 모델 모듈
-module memory_model(
-  input  bit clk,
-  input  bit rstn,
-  input  [31:0] addr,
-  input  [63:0] wdata,
-  input  [7:0]  sel,
-  input  bit    wen,
-  input  bit    ren,
-  output logic [63:0] rdata,
-  output logic        err,
-  output logic        ack
-);
-  // 메모리 배열
-  reg [63:0] memory [0:1023];
-  
-  // 초기화
-  initial begin
-    rdata = 64'h0;
-    err = 1'b0;
-    ack = 1'b0;
-    
     for (int i = 0; i < 1024; i++) begin
       memory[i] = 64'h0;
     end
   end
   
-  // 메모리 액세스 로직
+  // 메모리 모델 구현
   always @(posedge clk) begin
-    if (!rstn) begin
-      rdata <= 64'h0;
-      err <= 1'b0;
-      ack <= 1'b0;
-    end
-    else begin
+    if (rstn) begin
       // 읽기 작업 처리
-      if (ren) begin
-        rdata <= memory[addr[11:3]];  // 8바이트 단위 주소
-        ack <= 1'b1;
+      if (sys_ren) begin
+        sys_rdata <= memory[sys_addr[11:3]];  // 8바이트 단위 주소
+        sys_ack <= 1;
       end
       // 쓰기 작업 처리
-      else if (wen) begin
+      else if (sys_wen) begin
         // 스트로브에 따라 선택적으로 쓰기
         for (int i = 0; i < 8; i++) begin
-          if (sel[i])
-            memory[addr[11:3]][i*8 +: 8] <= wdata[i*8 +: 8];
+          if (sys_sel[i])
+            memory[sys_addr[11:3]][i*8 +: 8] <= sys_wdata[i*8 +: 8];
         end
-        ack <= 1'b1;
+        sys_ack <= 1;
       end
       else begin
-        ack <= 1'b0;
+        sys_ack <= 0;
       end
       
       // 오류 없음
-      err <= 1'b0;
+      sys_err <= 0;
+    end
+    else begin
+      sys_rdata <= 64'h0;
+      sys_ack <= 0;
+      sys_err <= 0;
     end
   end
-endmodule
-
-// 테스트 시퀀스 모듈
-module test_sequence(
-  input Axi4MasterBFM master_bfm
-);
+  
+  // 기본 테스트 시퀀스
   initial begin
     import pkg_Axi4Types::*;
     
@@ -376,4 +308,11 @@ module test_sequence(
     $display("시뮬레이션 완료");
     $finish;
   end
+  
+  // 파형 생성
+  initial begin
+    $dumpfile("axi_tb.vcd");
+    $dumpvars(0, axi_top_tb_simple);
+  end
+  
 endmodule
