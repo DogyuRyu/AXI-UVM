@@ -17,6 +17,15 @@ vlog -sv Axi4BFMs.sv
 # 인터페이스 어댑터 컴파일
 vlog -sv axi_interface_adapter.sv
 
+vlog -sv axi_sequence.svh
+vlog -sv axi_sequencer.svh
+vlog -sv axi_driver.svh
+vlog -sv axi_monitor.svh
+vlog -sv axi_scoreboard.svh
+vlog -sv axi_agent.svh
+vlog -sv axi_environment.svh
+vlog -sv axi_test.svh
+
 # DUT 컴파일
 vlog -sv axi_slave.v
 
