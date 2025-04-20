@@ -16,4 +16,4 @@ add wave -position insertpoint sim:/axi_top_tb/*
 add wave -position insertpoint sim:/axi_top_tb/axi_if/*
 add wave -position insertpoint sim:/axi_top_tb/dut/*
 
-run 100us
+run 100us   

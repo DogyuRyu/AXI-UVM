@@ -4,8 +4,6 @@ if {[file exists work]} {
 
 vlib work
 
-vlog -sv +incdir+$env(UVM_HOME)/src $env(UVM_HOME)/src/uvm_pkg.sv
-
 vlog -sv src/interfaces.sv
 vlog -sv src/Axi4Types.sv
 vlog -sv src/Axi4.sv
