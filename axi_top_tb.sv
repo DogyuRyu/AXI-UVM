@@ -1,101 +1,288 @@
-`timescale 1ns/1ps
+`include "uvm_macros.svh"
+`include "axi_sequence.svh"
+`include "axi_sequencer.svh"
+`include "axi_driver.svh"
+`include "axi_monitor.svh"
+`include "axi_scoreboard.svh"
+`include "axi_agent.svh"
+`include "axi_environment.svh"
+`include "axi_test.svh"
 
-module top_tb;
+// BFM 관련 파일 포함
+`include "interfaces.sv"
+`include "Axi4Types.sv"
+`include "Axi4.sv"
+`include "Axi4Agents.sv"
+`include "Axi4Drivers.sv"
+`include "Axi4BFMs.sv"
+`include "axi_interface_adapter.sv"
 
+module axi_top_tb;
   import uvm_pkg::*;
-  import axi_pkg::*;
-
-
-  `include "uvm_macros.svh"
-
-  // Clock & Reset
-  logic clk;
-  logic rst_n;
-
-  // Clock Generation
-  initial clk = 0;
-  always #5 clk = ~clk;
-
-  // Reset Generation
+  import pkg_Axi4Types::*;
+  import pkg_Axi4Agent::*;
+  import pkg_Axi4Driver::*;
+  
+  // 클럭 및 리셋 신호
+  bit clk;
+  bit rstn;
+  
+  // 클럭 생성
+  always #5 clk = ~clk;  // 100MHz 클럭
+  
+  // 리셋 생성
   initial begin
-    rst_n = 0;
-    #20 rst_n = 1;
+    rstn = 0;
+    #50;
+    rstn = 1;
   end
-
-  // AXI4 Interface
-  AXI4 #(.N(4), .I(4)) axi_if (.ACLK(clk), .ARESETn(rst_n));
-
-  // Master BFM
-  Axi4MasterBFM #(.N(4), .I(4)) axi_master_bfm (.intf(axi_if));
-
-  axi_duv_slave dut (
-    .aclk_i      (axi_if.ACLK),
-    .aresetn_i   (axi_if.ARESETn),
-    .awvalid_i   (axi_if.AWVALID),
-    .awaddr_i    (axi_if.AWADDR),
-    .awready_i   (axi_if.AWREADY),
-    .awid_i      (axi_if.AWID),
-    .awlen_i     (axi_if.AWLEN),
-    .awsize_i    (axi_if.AWSIZE),
-    .awburst_i   (axi_if.AWBURST),
-    .awlock_i    (axi_if.AWLOCK),
-    .awcache_i   (axi_if.AWCACHE),
-    .awprot_i    (axi_if.AWPROT),
-    .awqos_i     (4'b0000),
-    .awregion_i  (4'b0000),
-    .awuser_i    ('0),
-
-    .wvalid_i    (axi_if.WVALID),
-    .wdata_i     (axi_if.WDATA),
-    .wstrb_i     (axi_if.WSTRB),
-    .wlast_i     (axi_if.WLAST),
-    .wready_i    (axi_if.WREADY),
-    .wuser_i     ('0),
-
-    .bvalid_i    (axi_if.BVALID),
-    .bresp_i     (axi_if.BRESP),
-    .bid_i       (axi_if.BID),
-    .bready_i    (axi_if.BREADY),
-    .buser_i     (),
-
-    .arvalid_i   (axi_if.ARVALID),
-    .araddr_i    (axi_if.ARADDR),
-    .arready_i   (axi_if.ARREADY),
-    .arid_i      (axi_if.ARID),
-    .arlen_i     (axi_if.ARLEN),
-    .arsize_i    (axi_if.ARSIZE),
-    .arburst_i   (axi_if.ARBURST),
-    .arlock_i    (axi_if.ARLOCK),
-    .arcache_i   (axi_if.ARCACHE),
-    .arprot_i    (axi_if.ARPROT),
-    .arqos_i     (4'b0000),
-    .arregion_i  (4'b0000),
-    .aruser_i    ('0),
-
-    .rvalid_i    (axi_if.RVALID),
-    .rdata_i     (axi_if.RDATA),
-    .rresp_i     (axi_if.RRESP),
-    .rid_i       (axi_if.RID),
-    .rlast_i     (axi_if.RLAST),
-    .rready_i    (axi_if.RREADY),
-    .ruser_i     (),
-
-    .csysreq_i   (1'b0),
-    .csysack_i   (1'b0),
-    .cactive_i   (1'b0)
+  
+  // AXI 인터페이스 인스턴스화
+  AXI4 #(.N(8), .I(8)) axi_if(.ACLK(clk), .ARESETn(rstn));
+  
+  // AXI 내부 신호 선언 (어댑터와 DUT 간 연결)
+  logic [7:0]     axi_awid;
+  logic [31:0]    axi_awaddr;
+  logic [3:0]     axi_awlen;
+  logic [2:0]     axi_awsize;
+  logic [1:0]     axi_awburst;
+  logic [1:0]     axi_awlock;
+  logic [3:0]     axi_awcache;
+  logic [2:0]     axi_awprot;
+  logic           axi_awvalid;
+  logic           axi_awready;
+  
+  logic [7:0]     axi_wid;
+  logic [63:0]    axi_wdata;
+  logic [7:0]     axi_wstrb;
+  logic           axi_wlast;
+  logic           axi_wvalid;
+  logic           axi_wready;
+  
+  logic [7:0]     axi_bid;
+  logic [1:0]     axi_bresp;
+  logic           axi_bvalid;
+  logic           axi_bready;
+  
+  logic [7:0]     axi_arid;
+  logic [31:0]    axi_araddr;
+  logic [3:0]     axi_arlen;
+  logic [2:0]     axi_arsize;
+  logic [1:0]     axi_arburst;
+  logic [1:0]     axi_arlock;
+  logic [3:0]     axi_arcache;
+  logic [2:0]     axi_arprot;
+  logic           axi_arvalid;
+  logic           axi_arready;
+  
+  logic [7:0]     axi_rid;
+  logic [63:0]    axi_rdata;
+  logic [1:0]     axi_rresp;
+  logic           axi_rlast;
+  logic           axi_rvalid;
+  logic           axi_rready;
+  
+  // 시스템 인터페이스 신호
+  logic [31:0]    sys_addr;
+  logic [63:0]    sys_wdata;
+  logic [7:0]     sys_sel;
+  logic           sys_wen;
+  logic           sys_ren;
+  logic [63:0]    sys_rdata;
+  logic           sys_err;
+  logic           sys_ack;
+  
+  // BFM 인스턴스화
+  Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
+  
+  // 인터페이스 어댑터 인스턴스화
+  axi_interface_adapter #(
+    .AXI_DW(64),
+    .AXI_AW(32),
+    .AXI_IW(8),
+    .AXI_SW(8)
+  ) adapter (
+    .bfm_intf(axi_if),
+    
+    // global signals
+    .axi_clk_i(clk),
+    .axi_rstn_i(rstn),
+    
+    // AXI 신호 연결
+    .axi_awid_i(axi_awid),
+    .axi_awaddr_i(axi_awaddr),
+    .axi_awlen_i(axi_awlen),
+    .axi_awsize_i(axi_awsize),
+    .axi_awburst_i(axi_awburst),
+    .axi_awlock_i(axi_awlock),
+    .axi_awcache_i(axi_awcache),
+    .axi_awprot_i(axi_awprot),
+    .axi_awvalid_i(axi_awvalid),
+    .axi_awready_o(axi_awready),
+    
+    .axi_wid_i(axi_wid),
+    .axi_wdata_i(axi_wdata),
+    .axi_wstrb_i(axi_wstrb),
+    .axi_wlast_i(axi_wlast),
+    .axi_wvalid_i(axi_wvalid),
+    .axi_wready_o(axi_wready),
+    
+    .axi_bid_o(axi_bid),
+    .axi_bresp_o(axi_bresp),
+    .axi_bvalid_o(axi_bvalid),
+    .axi_bready_i(axi_bready),
+    
+    .axi_arid_i(axi_arid),
+    .axi_araddr_i(axi_araddr),
+    .axi_arlen_i(axi_arlen),
+    .axi_arsize_i(axi_arsize),
+    .axi_arburst_i(axi_arburst),
+    .axi_arlock_i(axi_arlock),
+    .axi_arcache_i(axi_arcache),
+    .axi_arprot_i(axi_arprot),
+    .axi_arvalid_i(axi_arvalid),
+    .axi_arready_o(axi_arready),
+    
+    .axi_rid_o(axi_rid),
+    .axi_rdata_o(axi_rdata),
+    .axi_rresp_o(axi_rresp),
+    .axi_rlast_o(axi_rlast),
+    .axi_rvalid_o(axi_rvalid),
+    .axi_rready_i(axi_rready),
+    
+    // 시스템 버스 신호
+    .sys_addr_o(sys_addr),
+    .sys_wdata_o(sys_wdata),
+    .sys_sel_o(sys_sel),
+    .sys_wen_o(sys_wen),
+    .sys_ren_o(sys_ren),
+    .sys_rdata_i(sys_rdata),
+    .sys_err_i(sys_err),
+    .sys_ack_i(sys_ack)
   );
-
-  initial begin
-    if (uvm_factory::get().find_by_name("axi_test") == null) begin
-      $display("[ERROR] axi_test not found in UVM factory!");
-      $finish;
-    end else begin
-      $display("[INFO] axi_test is correctly registered in the UVM factory.");
+  
+  // DUT 인스턴스화
+  axi_slave #(
+    .AXI_DW(64),
+    .AXI_AW(32),
+    .AXI_IW(8),
+    .AXI_SW(8)
+  ) dut (
+    // global signals
+    .axi_clk_i(clk),
+    .axi_rstn_i(rstn),
+    
+    // AXI 신호 연결
+    .axi_awid_i(axi_awid),
+    .axi_awaddr_i(axi_awaddr),
+    .axi_awlen_i(axi_awlen),
+    .axi_awsize_i(axi_awsize),
+    .axi_awburst_i(axi_awburst),
+    .axi_awlock_i(axi_awlock),
+    .axi_awcache_i(axi_awcache),
+    .axi_awprot_i(axi_awprot),
+    .axi_awvalid_i(axi_awvalid),
+    .axi_awready_o(axi_awready),
+    
+    .axi_wid_i(axi_wid),
+    .axi_wdata_i(axi_wdata),
+    .axi_wstrb_i(axi_wstrb),
+    .axi_wlast_i(axi_wlast),
+    .axi_wvalid_i(axi_wvalid),
+    .axi_wready_o(axi_wready),
+    
+    .axi_bid_o(axi_bid),
+    .axi_bresp_o(axi_bresp),
+    .axi_bvalid_o(axi_bvalid),
+    .axi_bready_i(axi_bready),
+    
+    .axi_arid_i(axi_arid),
+    .axi_araddr_i(axi_araddr),
+    .axi_arlen_i(axi_arlen),
+    .axi_arsize_i(axi_arsize),
+    .axi_arburst_i(axi_arburst),
+    .axi_arlock_i(axi_arlock),
+    .axi_arcache_i(axi_arcache),
+    .axi_arprot_i(axi_arprot),
+    .axi_arvalid_i(axi_arvalid),
+    .axi_arready_o(axi_arready),
+    
+    .axi_rid_o(axi_rid),
+    .axi_rdata_o(axi_rdata),
+    .axi_rresp_o(axi_rresp),
+    .axi_rlast_o(axi_rlast),
+    .axi_rvalid_o(axi_rvalid),
+    .axi_rready_i(axi_rready),
+    
+    // 시스템 버스 신호
+    .sys_addr_o(sys_addr),
+    .sys_wdata_o(sys_wdata),
+    .sys_sel_o(sys_sel),
+    .sys_wen_o(sys_wen),
+    .sys_ren_o(sys_ren),
+    .sys_rdata_i(sys_rdata),
+    .sys_err_i(sys_err),
+    .sys_ack_i(sys_ack)
+  );
+  
+  // 시스템 버스 응답 생성 (메모리 모델)
+  reg [63:0] memory [0:1023];  // 간단한 메모리 모델
+  
+  always @(posedge clk) begin
+    if (rstn) begin
+      // 읽기 작업 처리
+      if (sys_ren) begin
+        sys_rdata <= memory[sys_addr[11:3]];  // 8바이트 단위 주소
+        sys_ack <= 1;
+      end
+      // 쓰기 작업 처리
+      else if (sys_wen) begin
+        // 스트로브에 따라 선택적으로 쓰기
+        for (int i = 0; i < 8; i++) begin
+          if (sys_sel[i])
+            memory[sys_addr[11:3]][i*8 +: 8] <= sys_wdata[i*8 +: 8];
+        end
+        sys_ack <= 1;
+      end
+      else begin
+        sys_ack <= 0;
+      end
+      
+      // 오류 없음
+      sys_err <= 0;
     end
-
-    uvm_config_db#(virtual AXI4 #(4, 4))::set(null, "*", "vif", axi_if);
-
-    run_test("axi_test");
   end
-
+  
+  // UVM 테스트 시작
+  initial begin
+    // 가상 인터페이스 등록
+    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.*", "vif", axi_if);
+    
+    // 메일박스 설정
+    uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "ar_mbx", master_bfm.ARmbx);
+    uvm_config_db#(mailbox #(RBeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "r_mbx", master_bfm.Rmbx);
+    uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "aw_mbx", master_bfm.AWmbx);
+    uvm_config_db#(mailbox #(WBeat #(.N(8))))::set(null, "uvm_test_top.env.agent.driver", "w_mbx", master_bfm.Wmbx);
+    uvm_config_db#(mailbox #(BBeat #(.I(8))))::set(null, "uvm_test_top.env.agent.driver", "b_mbx", master_bfm.Bmbx);
+    
+    // 기준 에이전트 설정
+    uvm_config_db#(Axi4MasterAgent #(.N(8), .I(8)))::set(null, "uvm_test_top.env.agent.driver", "agent", master_bfm.Agent);
+    
+    // 테스트 실행
+    run_test("axi_single_rw_test");  // 기본 테스트 선택
+  end
+  
+  // 시뮬레이션 완료 시간 제한
+  initial begin
+    #100000;  // 100us 제한
+    `uvm_error("TB_TOP", "Simulation time limit exceeded")
+    $finish;
+  end
+  
+  // 추가 디버깅을 위한 파형 덤프
+  initial begin
+    $dumpfile("axi_tb.vcd");
+    $dumpvars(0, axi_top_tb);
+  end
+  
 endmodule

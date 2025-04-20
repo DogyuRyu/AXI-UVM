@@ -168,3 +168,149 @@ interface AXI4 #(
   );
   modport Monitor (clocking cbMON);
 endinterface
+
+interface AXI4Lite #(
+  parameter N = 4,
+  parameter I = 1)
+  (input bit ACLK, input bit ARESETn);
+  logic           ARVALID;
+  logic           ARREADY;
+  logic [31:0]    ARADDR;
+  logic [2:0]     ARPROT;
+  logic           RVALID;
+  logic           RREADY;
+  logic [8*N-1:0] RDATA;
+  logic [1:0]     RRESP;
+  logic           AWVALID;
+  logic           AWREADY;
+  logic [31:0]    AWADDR;
+  logic [2:0]     AWPROT;
+  logic           WVALID;
+  logic           WREADY;
+  logic [8*N-1:0] WDATA;
+  logic [N-1:0]   WSTRB;
+  logic           BVALID;
+  logic           BREADY;
+  logic [1:0]     BRESP;
+
+  clocking cbMON @(posedge ACLK);
+    input   ARVALID;
+    input   ARREADY;
+    input   ARADDR;
+    input   ARPROT;
+    input   RVALID;
+    input   RREADY;
+    input   RDATA;
+    input   RRESP;
+    input   AWVALID;
+    input   AWREADY;
+    input   AWADDR;
+    input   AWPROT;
+    input   WVALID;
+    input   WREADY;
+    input   WDATA;
+    input   WSTRB;
+    input   BVALID;
+    input   BREADY;
+    input   BRESP;
+  endclocking
+
+  modport M (
+    output  ARVALID,
+    input   ARREADY,
+    output  ARADDR,
+    output  ARPROT,
+    input   RVALID,
+    output  RREADY,
+    input   RDATA,
+    input   RRESP,
+    output  AWVALID,
+    input   AWREADY,
+    output  AWADDR,
+    output  AWPROT,
+    output  WVALID,
+    input   WREADY,
+    output  WDATA,
+    output  WSTRB,
+    input   BVALID,
+    output  BREADY,
+    input   BRESP
+  );
+  modport S (
+    input   ARVALID,
+    output  ARREADY,
+    input   ARADDR,
+    input   ARPROT,
+    output  RVALID,
+    input   RREADY,
+    output  RDATA,
+    output  RRESP,
+    input   AWVALID,
+    output  AWREADY,
+    input   AWADDR,
+    input   AWPROT,
+    input   WVALID,
+    output  WREADY,
+    input   WDATA,
+    input   WSTRB,
+    output  BVALID,
+    input   BREADY,
+    output  BRESP
+  );
+  modport Monitor (clocking cbMON);
+
+endinterface
+
+interface AXI4Stream #(
+  parameter N = 1,
+  parameter I = 1,
+  parameter D = 1,
+  parameter U = 1)
+  (input bit ACLK, input bit ARESETn);
+  logic             TVALID;
+  logic             TREADY;
+  logic [8*N-1:0]   TDATA;
+  logic [N-1:0]     TSTRB;
+  logic [N-1:0]     TKEEP;
+  logic             TLAST;
+  logic [I-1:0]     TID;
+  logic [D-1:0]     TDEST;
+  logic [U-1:0]     TUSER;
+
+  clocking cbMON @(posedge ACLK);
+    input TVALID;
+    input TREADY;
+    input TDATA;
+    input TSTRB;
+    input TKEEP;
+    input TLAST;
+    input TID;
+    input TDEST;
+    input TUSER;
+  endclocking
+
+  modport M(
+    output  TVALID,
+    input   TREADY,
+    output  TDATA,
+    output  TSTRB,
+    output  TKEEP,
+    output  TLAST,
+    output  TID,
+    output  TDEST,
+    output  TUSER
+  );
+  modport S(
+    input   TVALID,
+    output  TREADY,
+    input   TDATA,
+    input   TSTRB,
+    input   TKEEP,
+    input   TLAST,
+    input   TID,
+    input   TDEST,
+    input   TUSER
+  );
+  modport Monitor (clocking cbMON);
+endinterface
+
