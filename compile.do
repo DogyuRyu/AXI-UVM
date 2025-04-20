@@ -21,6 +21,6 @@ vlog -sv axi_interface_adapter.sv
 vlog -sv axi_slave.v
 
 # UVM 테스트벤치 컴파일
-vlog -sv +define+UVM_NO_DPI -L mtiUvm -ntb_opts uvm axi_top_tb.sv
+vlog -sv axi_top_tb.sv
 
 echo "컴파일이 완료되었습니다. run.do를 실행하여 시뮬레이션을 시작하세요."
