@@ -231,20 +231,64 @@ module axi_top_tb_simple;
   
   // 기본 테스트 시퀀스
   initial begin
+    import pkg_Axi4Types::*;
+    
+    ABeat ar_beat;
+    ABeat aw_beat;
+    WBeat w_beat;
+    
     // 기본 지연
     #100;
     
-    // 메모리에 데이터 쓰기
-    master_bfm.ARmbx.put(createARBeat(0, 32'h1000));
+    // 메모리에서 데이터 읽기 - ID 0, 주소 0x1000
+    ar_beat = new();
+    ar_beat.id = 0;
+    ar_beat.addr = 32'h1000;
+    ar_beat.len = 0;  // 단일 전송
+    ar_beat.size = 3; // 8바이트
+    ar_beat.burst = 1; // INCR 모드
+    ar_beat.lock = 0;
+    ar_beat.cache = 0;
+    ar_beat.prot = 0;
+    ar_beat.qos = 0;
+    ar_beat.region = 0;
+    master_bfm.ARmbx.put(ar_beat);
     #1000;
     
-    // 간단한 쓰기 트랜잭션
-    master_bfm.AWmbx.put(createAWBeat(0, 32'h2000));
-    master_bfm.Wmbx.put(createWBeat(64'hDEADBEEF12345678, 8'hFF, 1));
+    // 간단한 쓰기 트랜잭션 - ID 0, 주소 0x2000
+    aw_beat = new();
+    aw_beat.id = 0;
+    aw_beat.addr = 32'h2000;
+    aw_beat.len = 0;  // 단일 전송
+    aw_beat.size = 3; // 8바이트
+    aw_beat.burst = 1; // INCR 모드
+    aw_beat.lock = 0;
+    aw_beat.cache = 0;
+    aw_beat.prot = 0;
+    aw_beat.qos = 0;
+    aw_beat.region = 0;
+    master_bfm.AWmbx.put(aw_beat);
+    
+    w_beat = new();
+    w_beat.data = 64'hDEADBEEF12345678;
+    w_beat.strb = 8'hFF;
+    w_beat.last = 1;
+    master_bfm.Wmbx.put(w_beat);
     #1000;
     
-    // 메모리에서 데이터 읽기
-    master_bfm.ARmbx.put(createARBeat(1, 32'h2000));
+    // 메모리에서 데이터 읽기 - ID 1, 주소 0x2000
+    ar_beat = new();
+    ar_beat.id = 1;
+    ar_beat.addr = 32'h2000;
+    ar_beat.len = 0;  // 단일 전송
+    ar_beat.size = 3; // 8바이트
+    ar_beat.burst = 1; // INCR 모드
+    ar_beat.lock = 0;
+    ar_beat.cache = 0;
+    ar_beat.prot = 0;
+    ar_beat.qos = 0;
+    ar_beat.region = 0;
+    master_bfm.ARmbx.put(ar_beat);
     #1000;
     
     // 시뮬레이션 종료
@@ -257,49 +301,5 @@ module axi_top_tb_simple;
     $dumpfile("axi_tb.vcd");
     $dumpvars(0, axi_top_tb_simple);
   end
-  
-  // 헬퍼 함수: AR 비트 생성
-  function ABeat #(.N(8), .I(8)) createARBeat(bit [7:0] id, bit [31:0] addr);
-    ABeat #(.N(8), .I(8)) beat;
-    beat = new();
-    beat.id = id;
-    beat.addr = addr;
-    beat.len = 0;  // 단일 전송
-    beat.size = 3; // 8바이트
-    beat.burst = 1; // INCR 모드
-    beat.lock = 0;
-    beat.cache = 0;
-    beat.prot = 0;
-    beat.qos = 0;
-    beat.region = 0;
-    return beat;
-  endfunction
-  
-  // 헬퍼 함수: AW 비트 생성
-  function ABeat #(.N(8), .I(8)) createAWBeat(bit [7:0] id, bit [31:0] addr);
-    ABeat #(.N(8), .I(8)) beat;
-    beat = new();
-    beat.id = id;
-    beat.addr = addr;
-    beat.len = 0;  // 단일 전송
-    beat.size = 3; // 8바이트
-    beat.burst = 1; // INCR 모드
-    beat.lock = 0;
-    beat.cache = 0;
-    beat.prot = 0;
-    beat.qos = 0;
-    beat.region = 0;
-    return beat;
-  endfunction
-  
-  // 헬퍼 함수: W 비트 생성
-  function WBeat #(.N(8)) createWBeat(bit [63:0] data, bit [7:0] strb, bit last);
-    WBeat #(.N(8)) beat;
-    beat = new();
-    beat.data = data;
-    beat.strb = strb;
-    beat.last = last;
-    return beat;
-  endfunction
   
 endmodule
