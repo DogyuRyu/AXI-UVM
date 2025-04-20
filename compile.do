@@ -17,19 +17,10 @@ vlog -sv Axi4BFMs.sv
 # 인터페이스 어댑터 컴파일
 vlog -sv axi_interface_adapter.sv
 
-vlog -sv axi_sequence.svh
-vlog -sv axi_sequencer.svh
-vlog -sv axi_driver.svh
-vlog -sv axi_monitor.svh
-vlog -sv axi_scoreboard.svh
-vlog -sv axi_agent.svh
-vlog -sv axi_environment.svh
-vlog -sv axi_test.svh
-
 # DUT 컴파일
 vlog -sv axi_slave.v
 
-# UVM 테스트벤치 컴파일
-vlog -sv axi_top_tb.sv
+# UVM 테스트벤치 컴파일 (UVM 라이브러리 연결)
+vlog -sv -L mtiUvm -ntb_opts uvm axi_top_tb.sv
 
 echo "컴파일이 완료되었습니다. run.do를 실행하여 시뮬레이션을 시작하세요."

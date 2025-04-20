@@ -1,24 +1,18 @@
 `include "uvm_macros.svh"
-`include "axi_sequence.svh"
-`include "axi_sequencer.svh"
-`include "axi_driver.svh"
-`include "axi_monitor.svh"
-`include "axi_scoreboard.svh"
-`include "axi_agent.svh"
-`include "axi_environment.svh"
-`include "axi_test.svh"
-
-// BFM 관련 파일 포함
-`include "interfaces.sv"
-`include "Axi4Types.sv"
-`include "Axi4.sv"
-`include "Axi4Agents.sv"
-`include "Axi4Drivers.sv"
-`include "Axi4BFMs.sv"
-`include "axi_interface_adapter.sv"
 
 module axi_top_tb;
   import uvm_pkg::*;
+  
+  // UVM 컴포넌트 포함
+  `include "axi_sequence.svh"
+  `include "axi_sequencer.svh"
+  `include "axi_driver.svh"
+  `include "axi_monitor.svh"
+  `include "axi_scoreboard.svh"
+  `include "axi_agent.svh"
+  `include "axi_environment.svh"
+  `include "axi_test.svh"
+  
   import pkg_Axi4Types::*;
   import pkg_Axi4Agent::*;
   import pkg_Axi4Driver::*;
