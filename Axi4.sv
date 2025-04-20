@@ -195,8 +195,7 @@ typedef struct packed
     bit [255:0][N-1:0][7:0] data_t;
     bit [1:0] resp_t;
     bit last_t;
-    int j;
-    int j = 0;
+    automatic int j = 0;
     for (int i=0; i<256; i++)
     begin
 //      RTransfer(0, id_t, data_t[j], resp_t, last_t);
