@@ -1,11 +1,12 @@
-module axi_interface_adapter #(
+module axi_interface_adapter (
+  // 파라미터 선언
   parameter AXI_DW = 64,
   parameter AXI_AW = 32,
   parameter AXI_IW = 8,
-  parameter AXI_SW = AXI_DW/8
-)(
+  parameter AXI_SW = AXI_DW/8,
+
   // AXI4 인터페이스 (BFM 쪽)
-  AXI4 #(.N(AXI_SW), .I(AXI_IW)) bfm_intf,
+  AXI4 bfm_intf,
   
   // AXI3 신호 (DUT 쪽)
   // global signals
@@ -15,7 +16,7 @@ module axi_interface_adapter #(
   // axi write address channel
   output     [ AXI_IW-1: 0] axi_awid_i,
   output     [ AXI_AW-1: 0] axi_awaddr_i,
-  output     [      4-1: 0] axi_awlen_i,  // AXI3는 4비트 AWLEN
+  output     [      4-1: 0] axi_awlen_i,
   output     [      3-1: 0] axi_awsize_i,
   output     [      2-1: 0] axi_awburst_i,
   output     [      2-1: 0] axi_awlock_i,
@@ -25,7 +26,7 @@ module axi_interface_adapter #(
   input                     axi_awready_o,
   
   // axi write data channel
-  output     [ AXI_IW-1: 0] axi_wid_i,    // AXI3에는 WID 존재
+  output     [ AXI_IW-1: 0] axi_wid_i,
   output     [ AXI_DW-1: 0] axi_wdata_i,
   output     [ AXI_SW-1: 0] axi_wstrb_i,
   output                    axi_wlast_i,
@@ -41,7 +42,7 @@ module axi_interface_adapter #(
   // axi read address channel
   output     [ AXI_IW-1: 0] axi_arid_i,
   output     [ AXI_AW-1: 0] axi_araddr_i,
-  output     [      4-1: 0] axi_arlen_i,  // AXI3는 4비트 ARLEN
+  output     [      4-1: 0] axi_arlen_i,
   output     [      3-1: 0] axi_arsize_i,
   output     [      2-1: 0] axi_arburst_i,
   output     [      2-1: 0] axi_arlock_i,
