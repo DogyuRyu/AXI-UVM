@@ -1,10 +1,9 @@
-module axi_interface_adapter (
-  // 파라미터 선언
+module axi_interface_adapter #(
   parameter AXI_DW = 64,
   parameter AXI_AW = 32,
   parameter AXI_IW = 8,
-  parameter AXI_SW = AXI_DW/8,
-
+  parameter AXI_SW = AXI_DW/8
+) (
   // AXI4 인터페이스 (BFM 쪽)
   AXI4 bfm_intf,
   
