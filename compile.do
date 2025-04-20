@@ -4,12 +4,12 @@ if {[file exists work]} {
 
 vlib work
 
-vlog -sv src/interfaces.sv
-vlog -sv src/Axi4Types.sv
-vlog -sv src/Axi4.sv
-vlog -sv src/Axi4Agents.sv
-vlog -sv src/Axi4Drivers.sv
-vlog -sv src/Axi4BFMs.sv
+vlog -sv interfaces.sv
+vlog -sv Axi4Types.sv
+vlog -sv Axi4.sv
+vlog -sv Axi4Agents.sv
+vlog -sv Axi4Drivers.sv
+vlog -sv Axi4BFMs.sv
 
 vlog -sv axi_interface_adapter.sv
 
