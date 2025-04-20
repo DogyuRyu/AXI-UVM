@@ -17,7 +17,7 @@ if {$argc > 1} {
 echo "테스트 실행: $test_name (Verbosity: $verbosity)"
 
 # 시뮬레이션 시작
-vsim -novopt -t 1ps -sv_lib $env(UVM_HOME)/lib/uvm_dpi work.axi_top_tb +UVM_TESTNAME=$test_name +UVM_VERBOSITY=$verbosity -L uvm
+vsim -novopt -t 1ps -L mtiUvm -quiet -sv_lib mtiUvm work.axi_top_tb +UVM_TESTNAME=$test_name +UVM_VERBOSITY=$verbosity
 
 # 파형 추가
 add wave -position insertpoint sim:/axi_top_tb/*
