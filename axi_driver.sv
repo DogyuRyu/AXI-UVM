@@ -1,0 +1,80 @@
+`ifndef AXI_DRIVER_SV
+`define AXI_DRIVER_SV
+
+`include "uvm_macros.svh"
+import uvm_pkg::*;
+`include "axi_transactions.sv"
+
+class axi_driver extends uvm_driver #(axi_transaction);
+
+  `uvm_component_utils(axi_driver)
+
+  virtual AXI4 #(4, 4) vif;
+
+  function new(string name = "axi_driver", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#(virtual AXI4 #(4, 4))::get(this, "", "vif", vif)) begin
+      `uvm_fatal("AXI_DRIVER", "Virtual interface not set for axi_driver")
+    end
+  endfunction
+
+task run_phase(uvm_phase phase);
+  axi_transaction tr;
+
+  `uvm_info(get_type_name(), "Starting AXI driver...", UVM_LOW)
+
+  forever begin
+    seq_item_port.get_next_item(tr);
+
+    if (tr.cmd == AXI_WRITE) begin
+      `uvm_info(get_type_name(), $sformatf("WRITE @0x%08x = 0x%08x", tr.addr, tr.data), UVM_MEDIUM)
+      
+      vif.AWADDR   <= tr.addr;
+      vif.AWVALID  <= 1;
+      @(posedge vif.ACLK);
+      while (!vif.AWREADY) @(posedge vif.ACLK);
+      vif.AWVALID <= 0;
+
+      vif.WDATA   <= tr.data;
+      vif.WSTRB   <= tr.wstrb;
+      vif.WVALID  <= 1;
+      vif.WLAST   <= 1;
+      @(posedge vif.ACLK);
+      while (!vif.WREADY) @(posedge vif.ACLK);
+      vif.WVALID <= 0;
+      vif.WLAST  <= 0;
+
+      vif.BREADY <= 1;
+      @(posedge vif.ACLK);
+      while (!vif.BVALID) @(posedge vif.ACLK);
+      tr.resp = vif.BRESP;
+      vif.BREADY <= 0;
+    end
+    else if (tr.cmd == AXI_READ) begin
+      `uvm_info(get_type_name(), $sformatf("READ @0x%08x", tr.addr), UVM_MEDIUM)
+
+      vif.ARADDR  <= tr.addr;
+      vif.ARVALID <= 1;
+      @(posedge vif.ACLK);
+      while (!vif.ARREADY) @(posedge vif.ACLK);
+      vif.ARVALID <= 0;
+
+      vif.RREADY <= 1;
+      @(posedge vif.ACLK);
+      while (!vif.RVALID) @(posedge vif.ACLK);
+      tr.rdata = vif.RDATA;
+      tr.resp  = vif.RRESP;
+      vif.RREADY <= 0;
+    end
+
+    seq_item_port.item_done();
+  end
+endtask
+
+endclass
+
+`endif // AXI_DRIVER_SV
