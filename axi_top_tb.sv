@@ -1,7 +1,11 @@
+`timescale 1ns/1ps
 `include "uvm_macros.svh"
 
 module axi_top_tb;
   import uvm_pkg::*;
+  import pkg_Axi4Types::*;
+  import pkg_Axi4Agent::*;
+  import pkg_Axi4Driver::*;
   
   // UVM 컴포넌트 포함
   `include "axi_sequence.svh"
@@ -13,13 +17,9 @@ module axi_top_tb;
   `include "axi_environment.svh"
   `include "axi_test.svh"
   
-  import pkg_Axi4Types::*;
-  import pkg_Axi4Agent::*;
-  import pkg_Axi4Driver::*;
-  
   // 클럭 및 리셋 신호
-  bit clk;
-  bit rstn;
+  logic clk = 0;
+  logic rstn = 0;
   
   // 클럭 생성
   always #5 clk = ~clk;  // 100MHz 클럭
@@ -34,7 +34,7 @@ module axi_top_tb;
   // AXI 인터페이스 인스턴스화
   AXI4 #(.N(8), .I(8)) axi_if(.ACLK(clk), .ARESETn(rstn));
   
-  // AXI 내부 신호 선언 (어댑터와 DUT 간 연결)
+  // AXI 내부 신호 선언
   logic [7:0]     axi_awid;
   logic [31:0]    axi_awaddr;
   logic [3:0]     axi_awlen;
@@ -76,15 +76,20 @@ module axi_top_tb;
   logic           axi_rvalid;
   logic           axi_rready;
   
-  // 시스템 인터페이스 신호
+  // 시스템 인터페이스 신호 - 메모리 모델용 신호
   logic [31:0]    sys_addr;
   logic [63:0]    sys_wdata;
   logic [7:0]     sys_sel;
   logic           sys_wen;
   logic           sys_ren;
-  logic [63:0]    sys_rdata;
-  logic           sys_err;
-  logic           sys_ack;
+  logic [63:0]    mem_rdata;  // 메모리 모델 출력
+  logic           mem_ack;    // 메모리 모델 출력
+  logic           mem_err;    // 메모리 모델 출력
+  
+  // 메모리 모델에서 DUT로 연결
+  assign sys_rdata = mem_rdata;
+  assign sys_ack = mem_ack;
+  assign sys_err = mem_err;
   
   // BFM 인스턴스화
   Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
@@ -150,9 +155,9 @@ module axi_top_tb;
     .sys_sel_o(sys_sel),
     .sys_wen_o(sys_wen),
     .sys_ren_o(sys_ren),
-    .sys_rdata_i(sys_rdata),
-    .sys_err_i(sys_err),
-    .sys_ack_i(sys_ack)
+    .sys_rdata_i(mem_rdata),
+    .sys_err_i(mem_err),
+    .sys_ack_i(mem_ack)
   );
   
   // DUT 인스턴스화
@@ -214,20 +219,37 @@ module axi_top_tb;
     .sys_sel_o(sys_sel),
     .sys_wen_o(sys_wen),
     .sys_ren_o(sys_ren),
-    .sys_rdata_i(sys_rdata),
-    .sys_err_i(sys_err),
-    .sys_ack_i(sys_ack)
+    .sys_rdata_i(mem_rdata),
+    .sys_err_i(mem_err),
+    .sys_ack_i(mem_ack)
   );
   
   // 시스템 버스 응답 생성 (메모리 모델)
   reg [63:0] memory [0:1023];  // 간단한 메모리 모델
   
+  // 메모리 모델 초기화
+  initial begin
+    mem_rdata = 64'h0;
+    mem_ack = 1'b0;
+    mem_err = 1'b0;
+    
+    for (int i = 0; i < 1024; i++) begin
+      memory[i] = 64'h0;
+    end
+  end
+  
+  // 메모리 액세스 로직
   always @(posedge clk) begin
-    if (rstn) begin
+    if (!rstn) begin
+      mem_rdata <= 64'h0;
+      mem_ack <= 1'b0;
+      mem_err <= 1'b0;
+    end
+    else begin
       // 읽기 작업 처리
       if (sys_ren) begin
-        sys_rdata <= memory[sys_addr[11:3]];  // 8바이트 단위 주소
-        sys_ack <= 1;
+        mem_rdata <= memory[sys_addr[11:3]];  // 8바이트 단위 주소
+        mem_ack <= 1'b1;
       end
       // 쓰기 작업 처리
       else if (sys_wen) begin
@@ -236,14 +258,11 @@ module axi_top_tb;
           if (sys_sel[i])
             memory[sys_addr[11:3]][i*8 +: 8] <= sys_wdata[i*8 +: 8];
         end
-        sys_ack <= 1;
+        mem_ack <= 1'b1;
       end
       else begin
-        sys_ack <= 0;
+        mem_ack <= 1'b0;
       end
-      
-      // 오류 없음
-      sys_err <= 0;
     end
   end
   
