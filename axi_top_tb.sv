@@ -18,9 +18,9 @@ module axi_top_tb;
   `include "axi_test.svh"
   
   // 클럭 및 리셋 신호
-  logic clk = 0;
-  logic rstn = 0;
-  
+  logic clk;
+  logkc rstn;
+
   // 클럭 생성
   always #5 clk = ~clk;  // 100MHz 클럭
   
@@ -229,9 +229,9 @@ module axi_top_tb;
   
   // 메모리 모델 초기화
   initial begin
-    mem_rdata = 64'h0;
-    mem_ack = 1'b0;
-    mem_err = 1'b0;
+    // mem_rdata = 64'h0;
+    // mem_ack = 1'b0;
+    // mem_err = 1'b0;
     
     for (int i = 0; i < 1024; i++) begin
       memory[i] = 64'h0;
