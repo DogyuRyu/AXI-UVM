@@ -1,48 +1,6 @@
 `ifndef AXI_SEQUENCER_SVH
 `define AXI_SEQUENCER_SVH
 
-// AXI Sequencer 클래스
-// axi_seq_item 타입의 트랜잭션을 처리하는 UVM sequencer
-class axi_sequencer extends uvm_sequencer #(axi_seq_item);
-  
-  // UVM 매크로 선언
-  `uvm_component_utils(axi_sequencer)
-  
-  // 구성 객체 (설정 가능한 파라미터)
-  axi_config cfg;
-  
-  // 시퀀서 생성자
-  function new(string name, uvm_component parent);
-    super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Sequencer created", UVM_HIGH)
-  endfunction : new
-  
-  // 빌드 페이즈 - 구성 객체 획득
-  function void build_phase(uvm_phase phase);
-    super.build_phase(phase);
-    
-    // 구성 객체 가져오기 (있는 경우)
-    if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
-      `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
-      cfg = axi_config::type_id::create("default_cfg");
-    end
-  endfunction : build_phase
-  
-  // 연결 페이즈
-  function void connect_phase(uvm_phase phase);
-    super.connect_phase(phase);
-    `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
-  endfunction : connect_phase
-  
-  // 종료 페이즈 - 시퀀서 통계 출력
-  function void report_phase(uvm_phase phase);
-    super.report_phase(phase);
-    `uvm_info(get_type_name(), $sformatf("Report: Sequencer processed %0d transactions", 
-                                       this.seq_item_export.count()), UVM_LOW)
-  endfunction : report_phase
-  
-endclass : axi_sequencer
-
 // AXI 구성 클래스 (시퀀서 및 기타 컴포넌트에서 사용)
 class axi_config extends uvm_object;
 
@@ -98,5 +56,47 @@ class axi_config extends uvm_object;
   endfunction : copy_config
   
 endclass : axi_config
+
+// AXI Sequencer 클래스
+// axi_seq_item 타입의 트랜잭션을 처리하는 UVM sequencer
+class axi_sequencer extends uvm_sequencer #(axi_seq_item);
+  
+  // UVM 매크로 선언
+  `uvm_component_utils(axi_sequencer)
+  
+  // 구성 객체 (설정 가능한 파라미터)
+  axi_config cfg;
+  
+  // 시퀀서 생성자
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+    `uvm_info(get_type_name(), "AXI Sequencer created", UVM_HIGH)
+  endfunction : new
+  
+  // 빌드 페이즈 - 구성 객체 획득
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    
+    // 구성 객체 가져오기 (있는 경우)
+    if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
+      `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
+      cfg = axi_config::type_id::create("default_cfg");
+    end
+  endfunction : build_phase
+  
+  // 연결 페이즈
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
+  endfunction : connect_phase
+  
+  // 종료 페이즈 - 시퀀서 통계 출력
+  function void report_phase(uvm_phase phase);
+    super.report_phase(phase);
+    `uvm_info(get_type_name(), $sformatf("Report: Sequencer processed %0d transactions", 
+                                       this.seq_item_export.count()), UVM_LOW)
+  endfunction : report_phase
+  
+endclass : axi_sequencer
 
 `endif // AXI_SEQUENCER_SVH
