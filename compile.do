@@ -6,8 +6,8 @@ if {[file exists work]} {
 # 라이브러리 생성
 vlib work
 
-# UVM 패키지 컴파일
-vlog -sv +incdir+$env(UVM_HOME)/src $env(UVM_HOME)/src/uvm_pkg.sv
+# UVM 패키지 컴파일 (직접 경로 지정)
+vlog -sv +define+UVM_NO_DPI /package/eda/mg/questa2021.4/questasim/verilog_src/uvm-1.2/src/uvm_pkg.sv
 
 # 인터페이스 및 BFM 관련 파일 컴파일
 vlog -sv interfaces.sv
@@ -24,6 +24,6 @@ vlog -sv axi_interface_adapter.sv
 vlog -sv axi_slave.v
 
 # UVM 테스트벤치 컴파일 (최상위 모듈이 모든 UVM 관련 파일 포함)
-vlog -sv +incdir+$env(UVM_HOME)/src +incdir+. axi_top_tb.sv
+vlog -sv +incdir+/package/eda/mg/questa2021.4/questasim/verilog_src/uvm-1.2/src +incdir+. axi_top_tb.sv
 
 echo "컴파일이 완료되었습니다. run.do를 실행하여 시뮬레이션을 시작하세요."
