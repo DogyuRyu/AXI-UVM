@@ -1,7 +1,7 @@
 # 시뮬레이션 실행 스크립트
 
 # 시뮬레이션 시작
-vsim work.axi_top_tb_simple
+vsim -novopt -t 1ps work.axi_top_tb_simple
 
 # 파형 추가
 add wave -position insertpoint sim:/axi_top_tb_simple/*
