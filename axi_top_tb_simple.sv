@@ -25,9 +25,10 @@ module axi_top_tb_simple;
   initial begin
     import pkg_Axi4Types::*;
     
-    ABeat ar_beat;
-    ABeat aw_beat;
-    WBeat w_beat;
+    // 정확한 파라미터화된 타입으로 객체 선언
+    ABeat #(.N(8), .I(8)) ar_beat;
+    ABeat #(.N(8), .I(8)) aw_beat;
+    WBeat #(.N(8)) w_beat;
     
     // 기본 지연
     #100;
