@@ -19,7 +19,7 @@ module axi_top_tb;
   
   // 클럭 및 리셋 신호
   logic clk;
-  logkc rstn;
+  logic rstn;
 
   // 클럭 생성
   always #5 clk = ~clk;  // 100MHz 클럭
