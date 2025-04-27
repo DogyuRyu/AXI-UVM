@@ -1,4 +1,4 @@
-# compile.do
+# compile.do - Updated with +acc options
 
 # Delete previous compiled files
 if {[file exists work]} {
@@ -8,21 +8,21 @@ if {[file exists work]} {
 # Create library
 vlib work
 
-# Compile interfaces and BFM related files
-vlog -sv interfaces.sv
-vlog -sv Axi4Types.sv
-vlog -sv Axi4.sv
-vlog -sv Axi4Agents.sv
-vlog -sv Axi4Drivers.sv
-vlog -sv Axi4BFMs.sv
+# Compile interfaces and BFM related files with +acc option
+vlog -sv +acc=npr interfaces.sv
+vlog -sv +acc=npr Axi4Types.sv
+vlog -sv +acc=npr Axi4.sv
+vlog -sv +acc=npr Axi4Agents.sv
+vlog -sv +acc=npr Axi4Drivers.sv
+vlog -sv +acc=npr Axi4BFMs.sv
 
 # Compile interface adapter
-vlog -sv axi_interface_adapter.sv
+vlog -sv +acc=npr axi_interface_adapter.sv
 
 # Compile DUT
-vlog -sv axi_slave.v
+vlog -sv +acc=npr axi_slave.v
 
-# Compile simple testbench
-vlog -sv axi_top_tb.sv
+# Compile UVM testbench
+vlog -sv +acc=npr axi_top_tb.sv
 
-echo "Compilation completed. Run 'run.do' to start the simulation."
+echo "Compilation completed with +acc option. Run 'run.do' to start the simulation."
