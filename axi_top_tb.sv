@@ -7,7 +7,7 @@ module axi_top_tb;
   import pkg_Axi4Agent::*;
   import pkg_Axi4Driver::*;
   
-  // UVM 컴포넌트 포함
+  // Include UVM components
   `include "axi_sequence.svh"
   `include "axi_sequencer.svh"
   `include "axi_driver.svh"
@@ -17,27 +17,27 @@ module axi_top_tb;
   `include "axi_environment.svh"
   `include "axi_test.svh"
   
-  // 클럭 및 리셋 신호
+  // Clock and reset signals
   logic clk;
   logic rstn;
 
-  // 클럭 생성
+  // Clock generation - 100MHz clock
   initial begin
     clk = 0;
-    forever #5 clk = ~clk;  // 100MHz 클럭
+    forever #5 clk = ~clk;
   end
   
-  // 리셋 생성
+  // Reset generation
   initial begin
     rstn = 0;
     #50;
     rstn = 1;
   end
   
-  // AXI 인터페이스 인스턴스화
+  // AXI interface instantiation
   AXI4 #(.N(8), .I(8)) axi_if(.ACLK(clk), .ARESETn(rstn));
   
-  // AXI 내부 신호 선언
+  // AXI internal signals declaration
   logic [7:0]     axi_awid;
   logic [31:0]    axi_awaddr;
   logic [3:0]     axi_awlen;
@@ -81,32 +81,32 @@ module axi_top_tb;
   logic           axi_rvalid;
   logic           axi_rready;
   
-  // 시스템 인터페이스 신호
+  // System interface signals
   logic [31:0]    sys_addr;
   logic [63:0]    sys_wdata;
   logic [7:0]     sys_sel;
   logic           sys_wen;
   logic           sys_ren;
   
-  // 메모리 모델 신호와 DUT 입력 신호 분리
-  logic [63:0]    mem_rdata_internal;  // 메모리 모델 내부 출력
-  logic           mem_ack_internal;    // 메모리 모델 내부 출력
-  logic           mem_err_internal;    // 메모리 모델 내부 출력
+  // Separate memory model signals from DUT inputs
+  logic [63:0]    mem_rdata_internal;  // Internal memory model output
+  logic           mem_ack_internal;    // Internal memory model output
+  logic           mem_err_internal;    // Internal memory model output
   
-  // 메모리 모델에서 DUT로 연결
-  logic [63:0]    mem_rdata;  // DUT 입력
-  logic           mem_ack;    // DUT 입력  
-  logic           mem_err;    // DUT 입력
+  // Connect memory model to DUT inputs
+  logic [63:0]    mem_rdata;  // DUT input
+  logic           mem_ack;    // DUT input  
+  logic           mem_err;    // DUT input
   
-  // 메모리 신호 연결
+  // Memory signal connections
   assign mem_rdata = mem_rdata_internal;
   assign mem_ack = mem_ack_internal;
   assign mem_err = mem_err_internal;
   
-  // BFM 인스턴스화
+  // BFM instantiation
   Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
   
-  // 인터페이스 어댑터 인스턴스화
+  // Interface adapter instantiation
   axi_interface_adapter #(
     .AXI_DW(64),
     .AXI_AW(32),
@@ -161,7 +161,7 @@ module axi_top_tb;
     .axi_rvalid_o(axi_rvalid),
     .axi_rready_i(axi_rready),
     
-    // 어댑터는 시스템 버스 출력 포트를 연결하되 사용하지 않음
+    // Connect system bus output ports but not used
     .sys_addr_o(),
     .sys_wdata_o(),
     .sys_sel_o(),
@@ -172,7 +172,7 @@ module axi_top_tb;
     .sys_ack_i(mem_ack)
   );
   
-  // DUT 인스턴스화
+  // DUT instantiation
   axi_slave #(
     .AXI_DW(64),
     .AXI_AW(32),
@@ -225,7 +225,7 @@ module axi_top_tb;
     .axi_rvalid_o(axi_rvalid),
     .axi_rready_i(axi_rready),
     
-    // 시스템 버스 신호
+    // System bus signals
     .sys_addr_o(sys_addr),
     .sys_wdata_o(sys_wdata),
     .sys_sel_o(sys_sel),
@@ -236,17 +236,17 @@ module axi_top_tb;
     .sys_ack_i(mem_ack)
   );
   
-  // 메모리 모델
-  reg [63:0] memory [0:1023];  // 간단한 메모리 모델
+  // Memory model
+  reg [63:0] memory [0:1023];  // Simple memory model
   
-  // 메모리 모델 초기화
+  // Memory model initialization
   initial begin
     for (int i = 0; i < 1024; i++) begin
       memory[i] = 64'h0;
     end
   end
   
-  // 메모리 액세스 로직
+  // Memory access logic
   always @(posedge clk) begin
     if (!rstn) begin
       mem_rdata_internal <= 64'h0;
@@ -254,15 +254,15 @@ module axi_top_tb;
       mem_err_internal <= 1'b0;
     end
     else begin
-      // 읽기 작업 처리
+      // Handle read operations
       if (sys_ren) begin
-        mem_rdata_internal <= memory[sys_addr[11:3]];  // 8바이트 단위 주소
+        mem_rdata_internal <= memory[sys_addr[11:3]];  // 8-byte aligned address
         mem_ack_internal <= 1'b1;
         mem_err_internal <= 1'b0;
       end
-      // 쓰기 작업 처리
+      // Handle write operations
       else if (sys_wen) begin
-        // 스트로브에 따라 선택적으로 쓰기
+        // Selective write based on strobes
         for (int i = 0; i < 8; i++) begin
           if (sys_sel[i])
             memory[sys_addr[11:3]][i*8 +: 8] <= sys_wdata[i*8 +: 8];
@@ -277,39 +277,39 @@ module axi_top_tb;
     end
   end
   
-  // UVM 테스트 시작
+  // Start UVM test
   initial begin
-    // 가상 인터페이스 등록 - 모든 계층에 명시적으로 설정
+    // Register virtual interface - use explicit parameterization
     uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "*", "vif", axi_if);
     
-    // 각 컴포넌트에 대해 명시적으로 인터페이스 설정 (중복되더라도 안전하게)
-    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env", "vif", axi_if);
-    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent", "vif", axi_if);
-    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.driver", "vif", axi_if);
-    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.monitor", "vif", axi_if);
+    // Set for specific components explicitly (for added safety)
+    uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "uvm_test_top.env", "vif", axi_if);
+    uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "uvm_test_top.env.agent", "vif", axi_if);
+    uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "uvm_test_top.env.agent.driver", "vif", axi_if);
+    uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "uvm_test_top.env.agent.monitor", "vif", axi_if);
     
-    // 메일박스 설정
+    // Set mailboxes
     uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "ar_mbx", master_bfm.ARmbx);
     uvm_config_db#(mailbox #(RBeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "r_mbx", master_bfm.Rmbx);
     uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "aw_mbx", master_bfm.AWmbx);
     uvm_config_db#(mailbox #(WBeat #(.N(8))))::set(null, "uvm_test_top.env.agent.driver", "w_mbx", master_bfm.Wmbx);
     uvm_config_db#(mailbox #(BBeat #(.I(8))))::set(null, "uvm_test_top.env.agent.driver", "b_mbx", master_bfm.Bmbx);
     
-    // 기준 에이전트 설정
+    // Set master agent
     uvm_config_db#(Axi4MasterAgent #(.N(8), .I(8)))::set(null, "uvm_test_top.env.agent.driver", "agent", master_bfm.Agent);
     
-    // 테스트 실행
+    // Run test
     run_test("axi_single_rw_test");
   end
   
-  // 시뮬레이션 완료 시간 제한
+  // Simulation timeout limit
   initial begin
     #100000;
     `uvm_error("TB_TOP", "Simulation time limit exceeded")
     $finish;
   end
   
-  // 추가 디버깅을 위한 파형 덤프
+  // Waveform dump for additional debugging
   initial begin
     $dumpfile("axi_tb.vcd");
     $dumpvars(0, axi_top_tb);

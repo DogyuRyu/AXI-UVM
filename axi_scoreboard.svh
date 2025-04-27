@@ -1,50 +1,52 @@
 `ifndef AXI_SCOREBOARD_SVH
 `define AXI_SCOREBOARD_SVH
 
-// AXI 스코어보드 클래스
-// 예상 트랜잭션과 실제 트랜잭션을 비교하는 UVM 스코어보드
+// AXI Scoreboard Class
+// Compares expected transactions with actual transactions
 class axi_scoreboard extends uvm_scoreboard;
   
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_component_utils(axi_scoreboard)
   
-  // 구성 객체
+  // Configuration object
   axi_config cfg;
   
-  // TLM 포트 - 드라이버와 모니터로부터 트랜잭션 수신
-  uvm_analysis_imp #(axi_seq_item, axi_scoreboard) item_from_driver;
+  // TLM ports - receive transactions from driver and monitor
   uvm_analysis_imp #(axi_seq_item, axi_scoreboard) item_from_monitor;
+  uvm_analysis_export #(axi_seq_item) item_from_driver_export;
+  uvm_tlm_analysis_fifo #(axi_seq_item) driver_fifo;
   
-  // 예상 트랜잭션과 실제 트랜잭션 저장 큐
+  // Queue for expected transactions
   axi_seq_item exp_queue[$];
   
-  // 메모리 모델
-  bit [7:0] mem[*];  // 스파스 배열 - 실제 액세스된 주소만 저장
+  // Memory model
+  bit [7:0] mem[*];  // Sparse array - only stores actually accessed addresses
   
-  // 통계 카운터
+  // Statistics counters
   int num_transactions;
   int num_matches;
   int num_mismatches;
   
-  // UVM verbosity 설정
+  // UVM verbosity setting
   int unsigned verbosity_level = UVM_MEDIUM;
   
-  // 생성자
+  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    item_from_driver = new("item_from_driver", this);
     item_from_monitor = new("item_from_monitor", this);
+    item_from_driver_export = new("item_from_driver_export", this);
+    driver_fifo = new("driver_fifo", this);
     num_transactions = 0;
     num_matches = 0;
     num_mismatches = 0;
     `uvm_info(get_type_name(), "AXI Scoreboard created", UVM_HIGH)
   endfunction : new
   
-  // 빌드 페이즈 - 구성 객체 획득
+  // Build phase - get configuration object
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 가져오기
+    // Get configuration object
     if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
       `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
       cfg = axi_config::type_id::create("default_cfg");
@@ -53,23 +55,44 @@ class axi_scoreboard extends uvm_scoreboard;
     `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
   endfunction : build_phase
   
-  // 드라이버로부터 트랜잭션 수신
-  function void write_driver(axi_seq_item item);
+  // Connect phase - connect TLM ports
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    
+    // Connect driver export to FIFO
+    item_from_driver_export.connect(driver_fifo.analysis_export);
+    
+    `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
+  endfunction : connect_phase
+  
+  // Run phase - process transactions
+  task run_phase(uvm_phase phase);
+    axi_seq_item driver_item;
+    
+    forever begin
+      // Get expected transaction from driver
+      driver_fifo.get(driver_item);
+      process_driver_item(driver_item);
+    end
+  endtask : run_phase
+  
+  // Process driver transaction (expected transaction)
+  function void process_driver_item(axi_seq_item item);
     axi_seq_item exp_item;
     
-    // 로그 메시지
+    // Log message
     `uvm_info(get_type_name(), $sformatf("Received expected transaction from driver: %s", item.convert2string()), verbosity_level)
     
-    // 예상 트랜잭션 복사
+    // Copy expected transaction
     exp_item = axi_seq_item::type_id::create("exp_item");
     exp_item.copy(item);
     
-    // 쓰기 트랜잭션인 경우 메모리 업데이트
+    // If write transaction, update memory
     if (item.is_write) begin
       bit [63:0] data = item.data;
       bit [7:0] strb = item.strb;
       
-      // 쓰기 스트로브에 따라 메모리 업데이트
+      // Update memory based on write strobes
       for (int i = 0; i < 8; i++) begin
         if (strb[i]) begin
           mem[item.addr + i] = data[i*8 +: 8];
@@ -77,17 +100,17 @@ class axi_scoreboard extends uvm_scoreboard;
                                              item.addr+i, i, data[i*8 +: 8]), UVM_HIGH)
         end
       end
-    end
-    // 읽기 트랜잭션인 경우 메모리에서 데이터 읽기
+    }
+    // If read transaction, read data from memory
     else begin
       bit [63:0] data = 0;
       
-      // 8바이트 읽기
+      // Read 8 bytes
       for (int i = 0; i < 8; i++) begin
         if (mem.exists(item.addr + i))
           data[i*8 +: 8] = mem[item.addr + i];
         else
-          data[i*8 +: 8] = 0; // 초기화되지 않은 메모리는 0으로 간주
+          data[i*8 +: 8] = 0; // Uninitialized memory treated as 0
       end
       
       exp_item.rdata = data;
@@ -95,19 +118,19 @@ class axi_scoreboard extends uvm_scoreboard;
                                          item.addr, data), UVM_HIGH)
     end
     
-    // 예상 트랜잭션 큐에 저장
+    // Add expected transaction to queue
     exp_queue.push_back(exp_item);
-  endfunction : write_driver
+  endfunction : process_driver_item
   
-  // 모니터로부터 트랜잭션 수신
-  function void write_monitor(axi_seq_item item);
+  // Receive transaction from monitor
+  function void write(axi_seq_item item);
     axi_seq_item exp_item;
     bit found = 0;
     
-    // 로그 메시지
+    // Log message
     `uvm_info(get_type_name(), $sformatf("Received actual transaction from monitor: %s", item.convert2string()), verbosity_level)
     
-    // 실제 트랜잭션과 일치하는 예상 트랜잭션 찾기
+    // Find matching expected transaction
     foreach (exp_queue[i]) begin
       if ((exp_queue[i].addr == item.addr) && (exp_queue[i].id == item.id) && 
           (exp_queue[i].is_write == item.is_write)) begin
@@ -118,17 +141,17 @@ class axi_scoreboard extends uvm_scoreboard;
       end
     end
     
-    // 일치하는 예상 트랜잭션을 찾지 못한 경우
+    // If no matching expected transaction found
     if (!found) begin
       `uvm_error(get_type_name(), $sformatf("Unexpected transaction detected: %s", item.convert2string()))
       num_mismatches++;
       return;
     end
     
-    // 트랜잭션 비교
+    // Compare transactions
     num_transactions++;
     
-    // 쓰기 트랜잭션인 경우 응답 코드만 확인
+    // For write transactions, only check response code
     if (item.is_write) begin
       if (exp_item.resp == item.resp) begin
         `uvm_info(get_type_name(), $sformatf("Write transaction match - addr=0x%0h, resp=0x%0h", 
@@ -140,8 +163,8 @@ class axi_scoreboard extends uvm_scoreboard;
                                           item.addr, exp_item.resp, item.resp))
         num_mismatches++;
       end
-    end
-    // 읽기 트랜잭션인 경우 데이터와 응답 코드 모두 확인
+    }
+    // For read transactions, check both data and response code
     else begin
       if ((exp_item.rdata == item.rdata) && (exp_item.resp == item.resp)) begin
         `uvm_info(get_type_name(), $sformatf("Read transaction match - addr=0x%0h, data=0x%0h, resp=0x%0h", 
@@ -154,20 +177,13 @@ class axi_scoreboard extends uvm_scoreboard;
         num_mismatches++;
       end
     end
-  endfunction : write_monitor
-  
-  // 분석 포트로부터 트랜잭션 수신 (오버로딩)
-  function void write(axi_seq_item item);
-    // 소스 확인을 위해 item_from_driver와 item_from_monitor를 사용해야 함
-    // 이 함수는 직접 호출되면 안됨
-    `uvm_error(get_type_name(), "Direct write() call is not supported, use analysis port")
   endfunction : write
   
-  // 검사 페이즈 - 미처리 트랜잭션 확인
+  // Check phase - verify pending transactions
   function void check_phase(uvm_phase phase);
     super.check_phase(phase);
     
-    // 미처리 예상 트랜잭션 확인
+    // Check for pending expected transactions
     if (exp_queue.size() > 0) begin
       `uvm_error(get_type_name(), $sformatf("%0d expected transactions not received", exp_queue.size()))
       
@@ -177,7 +193,7 @@ class axi_scoreboard extends uvm_scoreboard;
     end
   endfunction : check_phase
   
-  // 종료 페이즈 - 스코어보드 통계 출력
+  // Report phase - output scoreboard statistics
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
     

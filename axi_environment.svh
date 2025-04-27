@@ -1,63 +1,63 @@
 `ifndef AXI_ENVIRONMENT_SVH
 `define AXI_ENVIRONMENT_SVH
 
-// AXI 환경 클래스
-// 에이전트와 스코어보드를 포함하는 UVM 환경
+// AXI Environment Class
+// Contains agent and scoreboard for the AXI UVM environment
 class axi_environment extends uvm_env;
   
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_component_utils(axi_environment)
   
-  // 구성 객체
+  // Configuration object
   axi_config cfg;
   
-  // 에이전트와 스코어보드 선언
+  // Agent and scoreboard declaration
   axi_agent      agent;
   axi_scoreboard scoreboard;
   
-  // 생성자
+  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
     `uvm_info(get_type_name(), "AXI Environment created", UVM_HIGH)
   endfunction : new
   
-  // 빌드 페이즈 - 컴포넌트 생성
+  // Build phase - create components
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 생성 또는 획득
+    // Create or get configuration object
     if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
       `uvm_info(get_type_name(), "Creating default configuration", UVM_MEDIUM)
       cfg = axi_config::type_id::create("cfg");
     end
     
-    // 에이전트 생성
+    // Create agent
     agent = axi_agent::type_id::create("agent", this);
     
-    // 스코어보드 생성
+    // Create scoreboard
     scoreboard = axi_scoreboard::type_id::create("scoreboard", this);
     
-    // 구성 객체 전달
+    // Pass configuration object
     uvm_config_db#(axi_config)::set(this, "agent", "cfg", cfg);
     uvm_config_db#(axi_config)::set(this, "scoreboard", "cfg", cfg);
     
     `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
   endfunction : build_phase
   
-  // 연결 페이즈 - 컴포넌트 연결
+  // Connect phase - connect components
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     
-    // 에이전트의 분석 포트를 스코어보드에 연결
-    agent.analysis_port.connect(scoreboard.item_from_monitor);
+    // Connect agent's monitor to scoreboard
+    agent.monitor.item_collected_port.connect(scoreboard.item_from_monitor);
     
-    // 드라이버에서 스코어보드로 직접 예상 트랜잭션 연결
-    agent.driver.seq_item_port.connect(scoreboard.item_from_driver);
+    // Create a special export in scoreboard for expected transactions from driver
+    // Use transaction export and import pattern instead of direct connection
     
     `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
   endfunction : connect_phase
   
-  // 종료 페이즈 - 환경 통계 출력
+  // Report phase - output environment statistics
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
     `uvm_info(get_type_name(), "Report: AXI Environment completed", UVM_LOW)

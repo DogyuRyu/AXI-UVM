@@ -1,28 +1,28 @@
 `ifndef AXI_MONITOR_SVH
 `define AXI_MONITOR_SVH
 
-// AXI 모니터 클래스
-// AXI 인터페이스의 트랜잭션을 관찰하고 분석하는 UVM 모니터
+// AXI Monitor Class
+// Observes and analyzes transactions on the AXI interface
 class axi_monitor extends uvm_monitor;
   
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_component_utils(axi_monitor)
   
-  // 구성 객체
+  // Configuration object
   axi_config cfg;
   
-  // 가상 인터페이스
+  // Virtual interface - with explicit parameterization
   virtual AXI4 #(.N(8), .I(8)) vif;
   
-  // 분석 포트 - 트랜잭션을 스코어보드로 전송
+  // Analysis port - sends transactions to scoreboard
   uvm_analysis_port #(axi_seq_item) item_collected_port;
   
-  // 트랜잭션 카운터
+  // Transaction counters
   int num_collected;
   int num_read_collected;
   int num_write_collected;
   
-  // 생성자
+  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
     num_collected = 0;
@@ -32,54 +32,54 @@ class axi_monitor extends uvm_monitor;
     `uvm_info(get_type_name(), "AXI Monitor created", UVM_HIGH)
   endfunction : new
   
-  // 빌드 페이즈 - 구성 객체 획득
+  // Build phase - get configuration object
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 가져오기
+    // Get configuration object
     if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
       `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
       cfg = axi_config::type_id::create("default_cfg");
     end
     
-    // 가상 인터페이스 가져오기
-    if (!uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::get(this, "", "vif", vif)) begin 
-      `uvm_fatal(get_type_name(), "No virtual interface found")
+    // Get virtual interface - with explicit parameterization
+    if (!uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::get(this, "", "vif", vif)) begin
+      `uvm_fatal(get_type_name(), "Virtual interface not found")
     end
     
     `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
   endfunction : build_phase
   
-  // 실행 페이즈 - 트랜잭션 모니터링 시작
+  // Run phase - start transaction monitoring
   task run_phase(uvm_phase phase);
-    axi_seq_item read_trans[$];  // 진행 중인 읽기 트랜잭션 큐
-    axi_seq_item write_trans[$]; // 진행 중인 쓰기 트랜잭션 큐
+    axi_seq_item read_trans[$];  // Queue of in-progress read transactions
+    axi_seq_item write_trans[$]; // Queue of in-progress write transactions
     
     `uvm_info(get_type_name(), "Run phase started", UVM_MEDIUM)
     
-    // 병렬로 모든 채널 모니터링
+    // Monitor all channels in parallel
     fork
-      // 읽기 주소 채널 모니터링
+      // Monitor read address channel
       monitor_ar_channel(read_trans);
       
-      // 읽기 데이터 채널 모니터링
+      // Monitor read data channel
       monitor_r_channel(read_trans);
       
-      // 쓰기 주소 채널 모니터링
+      // Monitor write address channel
       monitor_aw_channel(write_trans);
       
-      // 쓰기 데이터 채널 모니터링
+      // Monitor write data channel
       monitor_w_channel(write_trans);
       
-      // 쓰기 응답 채널 모니터링
+      // Monitor write response channel
       monitor_b_channel(write_trans);
       
-      // 리셋 모니터링
+      // Monitor reset
       monitor_reset();
     join
   endtask : run_phase
   
-  // 읽기 주소 채널 모니터링
+  // Monitor read address channel
   task monitor_ar_channel(ref axi_seq_item read_trans[$]);
     axi_seq_item tr;
     
@@ -87,22 +87,22 @@ class axi_monitor extends uvm_monitor;
       @(posedge vif.ACLK);
       
       if (vif.ARVALID && vif.ARREADY) begin
-        // 새 읽기 트랜잭션 생성
+        // Create new read transaction
         tr = axi_seq_item::type_id::create("tr");
         tr.addr = vif.ARADDR;
         tr.id = vif.ARID;
-        tr.is_write = 0;  // 읽기 트랜잭션
+        tr.is_write = 0;  // Read transaction
         
         `uvm_info(get_type_name(), $sformatf("Detected read transaction: addr=0x%0h, id=0x%0h", 
                                            tr.addr, tr.id), UVM_HIGH)
         
-        // 읽기 트랜잭션 큐에 추가
+        // Add to read transaction queue
         read_trans.push_back(tr);
       end
     end
   endtask : monitor_ar_channel
   
-  // 읽기 데이터 채널 모니터링
+  // Monitor read data channel
   task monitor_r_channel(ref axi_seq_item read_trans[$]);
     int i;
     
@@ -110,7 +110,7 @@ class axi_monitor extends uvm_monitor;
       @(posedge vif.ACLK);
       
       if (vif.RVALID && vif.RREADY) begin
-        // 해당 ID의 읽기 트랜잭션 찾기
+        // Find the corresponding read transaction by ID
         for (i = 0; i < read_trans.size(); i++) begin
           if (read_trans[i].id == vif.RID) begin
             read_trans[i].rdata = vif.RDATA;
@@ -119,7 +119,7 @@ class axi_monitor extends uvm_monitor;
             `uvm_info(get_type_name(), $sformatf("Completed read transaction: addr=0x%0h, data=0x%0h, resp=0x%0h", 
                                                read_trans[i].addr, read_trans[i].rdata, read_trans[i].resp), UVM_HIGH)
             
-            // 트랜잭션 완료 - 분석 포트로 전송
+            // Transaction complete - send to analysis port
             if (vif.RLAST) begin
               item_collected_port.write(read_trans[i]);
               num_collected++;
@@ -134,7 +134,7 @@ class axi_monitor extends uvm_monitor;
     end
   endtask : monitor_r_channel
   
-  // 쓰기 주소 채널 모니터링
+  // Monitor write address channel
   task monitor_aw_channel(ref axi_seq_item write_trans[$]);
     axi_seq_item tr;
     
@@ -142,22 +142,22 @@ class axi_monitor extends uvm_monitor;
       @(posedge vif.ACLK);
       
       if (vif.AWVALID && vif.AWREADY) begin
-        // 새 쓰기 트랜잭션 생성
+        // Create new write transaction
         tr = axi_seq_item::type_id::create("tr");
         tr.addr = vif.AWADDR;
         tr.id = vif.AWID;
-        tr.is_write = 1;  // 쓰기 트랜잭션
+        tr.is_write = 1;  // Write transaction
         
         `uvm_info(get_type_name(), $sformatf("Detected write transaction: addr=0x%0h, id=0x%0h", 
                                            tr.addr, tr.id), UVM_HIGH)
         
-        // 쓰기 트랜잭션 큐에 추가
+        // Add to write transaction queue
         write_trans.push_back(tr);
       end
     end
   endtask : monitor_aw_channel
   
-  // 쓰기 데이터 채널 모니터링
+  // Monitor write data channel
   task monitor_w_channel(ref axi_seq_item write_trans[$]);
     int i;
     
@@ -165,9 +165,9 @@ class axi_monitor extends uvm_monitor;
       @(posedge vif.ACLK);
       
       if (vif.WVALID && vif.WREADY) begin
-        // 진행 중인 쓰기 트랜잭션에 데이터 추가
+        // Add data to in-progress write transaction
         if (write_trans.size() > 0) begin
-          i = write_trans.size() - 1; // 가장 최근 트랜잭션
+          i = write_trans.size() - 1; // Most recent transaction
           write_trans[i].data = vif.WDATA;
           write_trans[i].strb = vif.WSTRB;
           
@@ -178,7 +178,7 @@ class axi_monitor extends uvm_monitor;
     end
   endtask : monitor_w_channel
   
-  // 쓰기 응답 채널 모니터링
+  // Monitor write response channel
   task monitor_b_channel(ref axi_seq_item write_trans[$]);
     int i;
     
@@ -186,7 +186,7 @@ class axi_monitor extends uvm_monitor;
       @(posedge vif.ACLK);
       
       if (vif.BVALID && vif.BREADY) begin
-        // 해당 ID의 쓰기 트랜잭션 찾기
+        // Find the corresponding write transaction by ID
         for (i = 0; i < write_trans.size(); i++) begin
           if (write_trans[i].id == vif.BID) begin
             write_trans[i].resp = vif.BRESP;
@@ -194,7 +194,7 @@ class axi_monitor extends uvm_monitor;
             `uvm_info(get_type_name(), $sformatf("Completed write transaction: addr=0x%0h, data=0x%0h, resp=0x%0h", 
                                                write_trans[i].addr, write_trans[i].data, write_trans[i].resp), UVM_HIGH)
             
-            // 트랜잭션 완료 - 분석 포트로 전송
+            // Transaction complete - send to analysis port
             item_collected_port.write(write_trans[i]);
             num_collected++;
             num_write_collected++;
@@ -207,19 +207,19 @@ class axi_monitor extends uvm_monitor;
     end
   endtask : monitor_b_channel
   
-  // 리셋 모니터링
+  // Monitor reset
   task monitor_reset();
     forever begin
       @(negedge vif.ARESETn);
       `uvm_info(get_type_name(), "Reset detected", UVM_MEDIUM)
       
-      // 리셋 동안 대기
+      // Wait during reset
       wait(vif.ARESETn);
       `uvm_info(get_type_name(), "Reset released", UVM_MEDIUM)
     end
   endtask : monitor_reset
   
-  // 종료 페이즈 - 모니터 통계 출력
+  // Report phase - output monitor statistics
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
     `uvm_info(get_type_name(), $sformatf("Report: Monitor collected %0d transactions (%0d reads, %0d writes)", 

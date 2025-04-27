@@ -1,35 +1,38 @@
 `ifndef AXI_DRIVER_SVH
 `define AXI_DRIVER_SVH
 
-// AXI 드라이버 클래스
-// axi_seq_item 타입의 트랜잭션을 받아 AXI BFM으로 전달하는 UVM 드라이버
+// AXI Driver Class
+// Receives transactions from sequencer and sends to AXI BFM
 class axi_driver extends uvm_driver #(axi_seq_item);
   
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_component_utils(axi_driver)
   
-  // 구성 객체
+  // Configuration object
   axi_config cfg;
   
-  // 가상 인터페이스
-  virtual AXI4 vif;
+  // Virtual interface - with explicit parameterization
+  virtual AXI4 #(.N(8), .I(8)) vif;
   
-  // BFM과 통신하기 위한 메일박스
+  // Analysis port for expected transactions
+  uvm_analysis_port #(axi_seq_item) exp_port;
+  
+  // Mailboxes for BFM communication
   mailbox #(ABeat #(.N(8), .I(8))) ar_mbx;
   mailbox #(RBeat #(.N(8), .I(8))) r_mbx;
   mailbox #(ABeat #(.N(8), .I(8))) aw_mbx;
   mailbox #(WBeat #(.N(8))) w_mbx;
   mailbox #(BBeat #(.I(8))) b_mbx;
   
-  // BFM Agent 참조
+  // BFM Agent reference
   Axi4MasterAgent #(.N(8), .I(8)) agent;
   
-  // 트랜잭션 수 카운터
+  // Transaction counters
   int num_sent;
   int num_read_sent;
   int num_write_sent;
   
-  // 생성자
+  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
     num_sent = 0;
@@ -38,62 +41,85 @@ class axi_driver extends uvm_driver #(axi_seq_item);
     `uvm_info(get_type_name(), "AXI Driver created", UVM_HIGH)
   endfunction : new
   
-  // 빌드 페이즈 - 구성 객체 획득 및 메일박스 생성
+  // Build phase - get configuration object and mailboxes
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 가져오기
+    // Get configuration object
     if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
       `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
       cfg = axi_config::type_id::create("default_cfg");
     end
     
-    // 가상 인터페이스 가져오기
-    if (!uvm_config_db#(virtual AXI4)::get(this, "", "vif", vif)) begin
-      `uvm_fatal(get_type_name(), "No virtual interface found")
+    // Get virtual interface
+    if (!uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::get(this, "", "vif", vif)) begin
+      `uvm_fatal(get_type_name(), "Virtual interface not found")
     end
     
-    // 메일박스 생성
-    ar_mbx = new();
-    r_mbx = new();
-    aw_mbx = new();
-    w_mbx = new();
-    b_mbx = new();
+    // Get mailboxes
+    if (!uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::get(this, "", "ar_mbx", ar_mbx)) begin
+      `uvm_fatal(get_type_name(), "AR mailbox not found")
+    end
+    
+    if (!uvm_config_db#(mailbox #(RBeat #(.N(8), .I(8))))::get(this, "", "r_mbx", r_mbx)) begin
+      `uvm_fatal(get_type_name(), "R mailbox not found")
+    end
+    
+    if (!uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::get(this, "", "aw_mbx", aw_mbx)) begin
+      `uvm_fatal(get_type_name(), "AW mailbox not found")
+    end
+    
+    if (!uvm_config_db#(mailbox #(WBeat #(.N(8))))::get(this, "", "w_mbx", w_mbx)) begin
+      `uvm_fatal(get_type_name(), "W mailbox not found")
+    end
+    
+    if (!uvm_config_db#(mailbox #(BBeat #(.I(8))))::get(this, "", "b_mbx", b_mbx)) begin
+      `uvm_fatal(get_type_name(), "B mailbox not found")
+    end
+    
+    // Create expected transaction port
+    exp_port = new("exp_port", this);
     
     `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
   endfunction : build_phase
   
-  // 연결 페이즈 - BFM Agent에 메일박스 연결
+  // Connect phase - connect to BFM Agent
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     
-    // BFM Agent 생성 및 연결
-    agent = new(ar_mbx, r_mbx, aw_mbx, w_mbx, b_mbx);
+    // Get BFM Agent
+    if (!uvm_config_db#(Axi4MasterAgent #(.N(8), .I(8)))::get(this, "", "agent", agent)) begin
+      `uvm_warning(get_type_name(), "BFM Agent not found, creating new instance")
+      agent = new(ar_mbx, r_mbx, aw_mbx, w_mbx, b_mbx);
+    end
     
     `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
   endfunction : connect_phase
   
-  // 실행 페이즈 - 트랜잭션 처리 루프
+  // Run phase - process transactions
   task run_phase(uvm_phase phase);
     axi_seq_item req, rsp;
     
     `uvm_info(get_type_name(), "Run phase started", UVM_MEDIUM)
     
     forever begin
-      // 시퀀서로부터 트랜잭션 가져오기
+      // Get transaction from sequencer
       seq_item_port.get_next_item(req);
       
       `uvm_info(get_type_name(), $sformatf("Processing transaction: %s", req.convert2string()), UVM_HIGH)
       
-      // 트랜잭션 처리
+      // Send expected transaction to scoreboard
+      exp_port.write(req);
+      
+      // Process transaction
       process_transaction(req);
       
-      // 트랜잭션 응답 처리
+      // Create response
       rsp = axi_seq_item::type_id::create("rsp");
       rsp.set_id_info(req);
       
       if (req.is_write) begin
-        // 쓰기 응답 처리
+        // Handle write response
         BBeat #(.I(8)) bb;
         b_mbx.get(bb);
         
@@ -101,9 +127,9 @@ class axi_driver extends uvm_driver #(axi_seq_item);
         rsp.id = bb.id;
         
         num_write_sent++;
-      end
+      }
       else begin
-        // 읽기 응답 처리
+        // Handle read response
         RBeat #(.N(8), .I(8)) rb;
         r_mbx.get(rb);
         
@@ -114,7 +140,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
         num_read_sent++;
       end
       
-      // 응답 전송
+      // Send response
       seq_item_port.item_done(rsp);
       num_sent++;
       
@@ -122,59 +148,59 @@ class axi_driver extends uvm_driver #(axi_seq_item);
     end
   endtask : run_phase
   
-  // 트랜잭션 처리 함수
+  // Process transaction
   task process_transaction(axi_seq_item req);
     if (req.is_write) begin
-      // 쓰기 트랜잭션 처리
+      // Process write transaction
       ABeat #(.N(8), .I(8)) awbeat = new();
       WBeat #(.N(8)) wbeat = new();
       
-      // 어드레스 채널 데이터 설정
+      // Set address channel data
       awbeat.id = req.id;
       awbeat.addr = req.addr;
-      awbeat.len = 0;  // 단일 트랜젝션 (버스트 미지원)
-      awbeat.size = 3; // 8바이트 (64비트) 데이터
-      awbeat.burst = 1; // INCR 버스트 타입
+      awbeat.len = 0;  // Single transaction (no burst support)
+      awbeat.size = 3; // 8 bytes (64-bit) data
+      awbeat.burst = 1; // INCR burst type
       awbeat.lock = 0;
       awbeat.cache = 0;
       awbeat.prot = 0;
       awbeat.qos = 0;
       awbeat.region = 0;
       
-      // 데이터 채널 데이터 설정
+      // Set data channel data
       wbeat.data = req.data;
       wbeat.strb = req.strb;
-      wbeat.last = 1; // 마지막 데이터 (단일 트랜젝션)
+      wbeat.last = 1; // Last data (single transaction)
       
-      // BFM으로 데이터 전송
+      // Send data to BFM
       `uvm_info(get_type_name(), $sformatf("Sending write transaction: addr=0x%0h, data=0x%0h", 
                                          req.addr, req.data), UVM_HIGH)
       aw_mbx.put(awbeat);
       w_mbx.put(wbeat);
-    end
+    }
     else begin
-      // 읽기 트랜잭션 처리
+      // Process read transaction
       ABeat #(.N(8), .I(8)) arbeat = new();
       
-      // 어드레스 채널 데이터 설정
+      // Set address channel data
       arbeat.id = req.id;
       arbeat.addr = req.addr;
-      arbeat.len = 0;  // 단일 트랜젝션 (버스트 미지원)
-      arbeat.size = 3; // 8바이트 (64비트) 데이터
-      arbeat.burst = 1; // INCR 버스트 타입
+      arbeat.len = 0;  // Single transaction (no burst support)
+      arbeat.size = 3; // 8 bytes (64-bit) data
+      arbeat.burst = 1; // INCR burst type
       arbeat.lock = 0;
       arbeat.cache = 0;
       arbeat.prot = 0;
       arbeat.qos = 0;
       arbeat.region = 0;
       
-      // BFM으로 데이터 전송
+      // Send data to BFM
       `uvm_info(get_type_name(), $sformatf("Sending read transaction: addr=0x%0h", req.addr), UVM_HIGH)
       ar_mbx.put(arbeat);
     end
   endtask : process_transaction
   
-  // 종료 페이즈 - 드라이버 통계 출력
+  // Report phase - output driver statistics
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
     `uvm_info(get_type_name(), $sformatf("Report: Driver processed %0d transactions (%0d reads, %0d writes)", 
