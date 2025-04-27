@@ -59,8 +59,7 @@ class axi_agent extends uvm_agent;
     // Connect monitor to analysis port (for scoreboard)
     monitor.item_collected_port.connect(analysis_port);
     
-    // Create driver analysis port for expected transactions
-    driver.exp_port = new("exp_port", driver);
+    // REMOVE THIS LINE: driver.exp_port = new("exp_port", driver);
     
     `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
   endfunction : connect_phase

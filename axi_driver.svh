@@ -41,7 +41,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
     `uvm_info(get_type_name(), "AXI Driver created", UVM_HIGH)
   endfunction : new
   
-  // Build phase - get configuration object and mailboxes
+  // Build phase
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
@@ -56,28 +56,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       `uvm_fatal(get_type_name(), "Virtual interface not found")
     end
     
-    // Get mailboxes
-    if (!uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::get(this, "", "ar_mbx", ar_mbx)) begin
-      `uvm_fatal(get_type_name(), "AR mailbox not found")
-    end
-    
-    if (!uvm_config_db#(mailbox #(RBeat #(.N(8), .I(8))))::get(this, "", "r_mbx", r_mbx)) begin
-      `uvm_fatal(get_type_name(), "R mailbox not found")
-    end
-    
-    if (!uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::get(this, "", "aw_mbx", aw_mbx)) begin
-      `uvm_fatal(get_type_name(), "AW mailbox not found")
-    end
-    
-    if (!uvm_config_db#(mailbox #(WBeat #(.N(8))))::get(this, "", "w_mbx", w_mbx)) begin
-      `uvm_fatal(get_type_name(), "W mailbox not found")
-    end
-    
-    if (!uvm_config_db#(mailbox #(BBeat #(.I(8))))::get(this, "", "b_mbx", b_mbx)) begin
-      `uvm_fatal(get_type_name(), "B mailbox not found")
-    end
-    
-    // Create expected transaction port
+    // Create expected transaction port - MOVED FROM CONNECT PHASE
     exp_port = new("exp_port", this);
     
     `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
