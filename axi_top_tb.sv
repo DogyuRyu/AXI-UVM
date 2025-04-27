@@ -26,6 +26,7 @@ module axi_top_tb;
   
   // 리셋 생성
   initial begin
+    clk = 0;
     rstn = 0;
     #50;
     rstn = 1;
@@ -82,14 +83,19 @@ module axi_top_tb;
   logic [7:0]     sys_sel;
   logic           sys_wen;
   logic           sys_ren;
-  logic [63:0]    mem_rdata;  // 메모리 모델 출력
-  logic           mem_ack;    // 메모리 모델 출력
-  logic           mem_err;    // 메모리 모델 출력
+  logic [63:0]    sys_rdata_i;  // Changed name to avoid conflict
+  logic           sys_ack_i;    // Changed name to avoid conflict
+  logic           sys_err_i;    // Changed name to avoid conflict
   
-  // 메모리 모델에서 DUT로 연결
-  assign sys_rdata = mem_rdata;
-  assign sys_ack = mem_ack;
-  assign sys_err = mem_err;
+  // 메모리 모델에서 생성된 신호
+  logic [63:0]    mem_rdata;
+  logic           mem_ack;
+  logic           mem_err;
+  
+  // 메모리 모델에서 DUT로 연결 (직접 연결)
+  assign sys_rdata_i = mem_rdata;
+  assign sys_ack_i = mem_ack;
+  assign sys_err_i = mem_err;
   
   // BFM 인스턴스화
   Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
@@ -155,9 +161,9 @@ module axi_top_tb;
     .sys_sel_o(sys_sel),
     .sys_wen_o(sys_wen),
     .sys_ren_o(sys_ren),
-    .sys_rdata_i(mem_rdata),
-    .sys_err_i(mem_err),
-    .sys_ack_i(mem_ack)
+    .sys_rdata_i(sys_rdata_i),
+    .sys_err_i(sys_err_i),
+    .sys_ack_i(sys_ack_i)
   );
   
   // DUT 인스턴스화
@@ -219,9 +225,9 @@ module axi_top_tb;
     .sys_sel_o(sys_sel),
     .sys_wen_o(sys_wen),
     .sys_ren_o(sys_ren),
-    .sys_rdata_i(mem_rdata),
-    .sys_err_i(mem_err),
-    .sys_ack_i(mem_ack)
+    .sys_rdata_i(sys_rdata_i),
+    .sys_err_i(sys_err_i),
+    .sys_ack_i(sys_ack_i)
   );
   
   // 시스템 버스 응답 생성 (메모리 모델)
@@ -229,13 +235,13 @@ module axi_top_tb;
   
   // 메모리 모델 초기화
   initial begin
-    // mem_rdata = 64'h0;
-    // mem_ack = 1'b0;
-    // mem_err = 1'b0;
-    
     for (int i = 0; i < 1024; i++) begin
       memory[i] = 64'h0;
     end
+    
+    mem_rdata = 64'h0;
+    mem_ack = 1'b0;
+    mem_err = 1'b0;
   end
   
   // 메모리 액세스 로직
