@@ -171,61 +171,53 @@ module axi_top_tb;
     .STRB_WIDTH(8)
   ) dut (
     // global signals
-    .axi_clk_i(clk),
-    .axi_rstn_i(rstn),
-    
-    // AXI signals
-    .axi_awid_i(axi_awid),
-    .axi_awaddr_i(axi_awaddr),
-    .axi_awlen_i(axi_awlen),
-    .axi_awsize_i(axi_awsize),
-    .axi_awburst_i(axi_awburst),
-    .axi_awlock_i(axi_awlock),
-    .axi_awcache_i(axi_awcache),
-    .axi_awprot_i(axi_awprot),
-    .axi_awvalid_i(axi_awvalid),
-    .axi_awready_o(axi_awready),
-    
-    .axi_wid_i(axi_wid),
-    .axi_wdata_i(axi_wdata),
-    .axi_wstrb_i(axi_wstrb),
-    .axi_wlast_i(axi_wlast),
-    .axi_wvalid_i(axi_wvalid),
-    .axi_wready_o(axi_wready),
-    
-    .axi_bid_o(axi_bid),
-    .axi_bresp_o(axi_bresp),
-    .axi_bvalid_o(axi_bvalid),
-    .axi_bready_i(axi_bready),
-    
-    .axi_arid_i(axi_arid),
-    .axi_araddr_i(axi_araddr),
-    .axi_arlen_i(axi_arlen),
-    .axi_arsize_i(axi_arsize),
-    .axi_arburst_i(axi_arburst),
-    .axi_arlock_i(axi_arlock),
-    .axi_arcache_i(axi_arcache),
-    .axi_arprot_i(axi_arprot),
-    .axi_arvalid_i(axi_arvalid),
-    .axi_arready_o(axi_arready),
-    
-    .axi_rid_o(axi_rid),
-    .axi_rdata_o(axi_rdata),
-    .axi_rresp_o(axi_rresp),
-    .axi_rlast_o(axi_rlast),
-    .axi_rvalid_o(axi_rvalid),
-    .axi_rready_i(axi_rready),
-    
-    // System bus signals
-    .sys_addr_o(sys_addr),
-    .sys_wdata_o(sys_wdata),
-    .sys_sel_o(sys_sel),
-    .sys_wen_o(sys_wen),
-    .sys_ren_o(sys_ren),
-    // Fixed: Connect directly to memory model signals
-    .sys_rdata_i(mem_rdata_internal),
-    .sys_err_i(mem_err_internal),
-    .sys_ack_i(mem_ack_internal)
+    .clk(clk),
+    .rst(~rstn),
+
+    // AXI write address channel
+    .s_axi_awid(axi_awid),
+    .s_axi_awaddr(axi_awaddr),
+    .s_axi_awlen(axi_awlen),
+    .s_axi_awsize(axi_awsize),
+    .s_axi_awburst(axi_awburst),
+    .s_axi_awlock(axi_awlock),
+    .s_axi_awcache(axi_awcache),
+    .s_axi_awprot(axi_awprot),
+    .s_axi_awvalid(axi_awvalid),
+    .s_axi_awready(axi_awready),
+
+    // AXI write data channel
+    .s_axi_wdata(axi_wdata),
+    .s_axi_wstrb(axi_wstrb),
+    .s_axi_wlast(axi_wlast),
+    .s_axi_wvalid(axi_wvalid),
+    .s_axi_wready(axi_wready),
+
+    // AXI write response channel
+    .s_axi_bid(axi_bid),
+    .s_axi_bresp(axi_bresp),
+    .s_axi_bvalid(axi_bvalid),
+    .s_axi_bready(axi_bready),
+
+    // AXI read address channel
+    .s_axi_arid(axi_arid),
+    .s_axi_araddr(axi_araddr),
+    .s_axi_arlen(axi_arlen),
+    .s_axi_arsize(axi_arsize),
+    .s_axi_arburst(axi_arburst),
+    .s_axi_arlock(axi_arlock),
+    .s_axi_arcache(axi_arcache),
+    .s_axi_arprot(axi_arprot),
+    .s_axi_arvalid(axi_arvalid),
+    .s_axi_arready(axi_arready),
+
+    // AXI read data channel
+    .s_axi_rid(axi_rid),
+    .s_axi_rdata(axi_rdata),
+    .s_axi_rresp(axi_rresp),
+    .s_axi_rlast(axi_rlast),
+    .s_axi_rvalid(axi_rvalid),
+    .s_axi_rready(axi_rready)
   );
   
   // Memory model - simplified memory model
