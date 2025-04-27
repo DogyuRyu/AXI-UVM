@@ -23,6 +23,6 @@ vlog -sv axi_interface_adapter.sv
 vlog -sv axi_slave.v
 
 # Compile simple testbench
-vlog -sv axi_top_tb_simple.sv
+vlog -sv axi_top_tb.sv
 
 echo "Compilation completed. Run 'run.do' to start the simulation."
