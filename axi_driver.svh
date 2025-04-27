@@ -123,6 +123,9 @@ class axi_driver extends uvm_driver #(axi_seq_item);
   
   // Direct interface driving
   task drive_transaction(axi_seq_item req);
+    bit timeout;
+    int timeout_count;
+    
     if (req.is_write) begin
       `uvm_info(get_type_name(), $sformatf("Driving AXI write signals: addr=0x%0h, data=0x%0h", 
                                          req.addr, req.data), UVM_MEDIUM)
@@ -141,18 +144,22 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       vif.AWQOS <= 0;
       vif.AWVALID <= 1;
       
-      // Wait for AWREADY
-      repeat (10) begin
+      // Wait for AWREADY with timeout
+      timeout = 1;
+      timeout_count = 0;
+      
+      while (timeout && timeout_count < 10) begin
         @(posedge vif.ACLK);
-        if (vif.AWREADY) break;
+        if (vif.AWREADY) begin
+          timeout = 0;
+        end
+        else begin
+          timeout_count++;
+        end
       end
       
-      // If AWREADY not asserted after timeout, force it for testing
-      if (!vif.AWREADY) begin
-        `uvm_warning(get_type_name(), "AWREADY not asserted, forcing it for testing")
-        force vif.AWREADY = 1;
-        @(posedge vif.ACLK);
-        release vif.AWREADY;
+      if (timeout) begin
+        `uvm_warning(get_type_name(), "AWREADY not asserted after timeout")
       end
       
       vif.AWVALID <= 0;
@@ -164,18 +171,22 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       vif.WLAST <= 1;
       vif.WVALID <= 1;
       
-      // Wait for WREADY
-      repeat (10) begin
+      // Wait for WREADY with timeout
+      timeout = 1;
+      timeout_count = 0;
+      
+      while (timeout && timeout_count < 10) begin
         @(posedge vif.ACLK);
-        if (vif.WREADY) break;
+        if (vif.WREADY) begin
+          timeout = 0;
+        end
+        else begin
+          timeout_count++;
+        end
       end
       
-      // If WREADY not asserted after timeout, force it for testing
-      if (!vif.WREADY) begin
-        `uvm_warning(get_type_name(), "WREADY not asserted, forcing it for testing")
-        force vif.WREADY = 1;
-        @(posedge vif.ACLK);
-        release vif.WREADY;
+      if (timeout) begin
+        `uvm_warning(get_type_name(), "WREADY not asserted after timeout")
       end
       
       vif.WVALID <= 0;
@@ -183,24 +194,27 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       // Wait for write response
       vif.BREADY <= 1;
       
-      repeat (10) begin
+      // Wait for BVALID with timeout
+      timeout = 1;
+      timeout_count = 0;
+      
+      while (timeout && timeout_count < 10) begin
         @(posedge vif.ACLK);
-        if (vif.BVALID) break;
+        if (vif.BVALID) begin
+          timeout = 0;
+        end
+        else begin
+          timeout_count++;
+        end
       end
       
-      // If BVALID not asserted after timeout, force it for testing
-      if (!vif.BVALID) begin
-        `uvm_warning(get_type_name(), "BVALID not asserted, forcing it for testing")
-        force vif.BVALID = 1;
-        force vif.BID = req.id;
-        force vif.BRESP = 0;
+      if (timeout) begin
+        `uvm_warning(get_type_name(), "BVALID not asserted after timeout")
+      end
+      else begin
         @(posedge vif.ACLK);
-        release vif.BVALID;
-        release vif.BID;
-        release vif.BRESP;
       end
       
-      @(posedge vif.ACLK);
       vif.BREADY <= 0;
     end
     else begin
@@ -220,18 +234,22 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       vif.ARQOS <= 0;
       vif.ARVALID <= 1;
       
-      // Wait for ARREADY
-      repeat (10) begin
+      // Wait for ARREADY with timeout
+      timeout = 1;
+      timeout_count = 0;
+      
+      while (timeout && timeout_count < 10) begin
         @(posedge vif.ACLK);
-        if (vif.ARREADY) break;
+        if (vif.ARREADY) begin
+          timeout = 0;
+        end
+        else begin
+          timeout_count++;
+        end
       end
       
-      // If ARREADY not asserted after timeout, force it for testing
-      if (!vif.ARREADY) begin
-        `uvm_warning(get_type_name(), "ARREADY not asserted, forcing it for testing")
-        force vif.ARREADY = 1;
-        @(posedge vif.ACLK);
-        release vif.ARREADY;
+      if (timeout) begin
+        `uvm_warning(get_type_name(), "ARREADY not asserted after timeout")
       end
       
       vif.ARVALID <= 0;
@@ -239,28 +257,27 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       // Wait for read data
       vif.RREADY <= 1;
       
-      repeat (10) begin
+      // Wait for RVALID with timeout
+      timeout = 1;
+      timeout_count = 0;
+      
+      while (timeout && timeout_count < 10) begin
         @(posedge vif.ACLK);
-        if (vif.RVALID) break;
+        if (vif.RVALID) begin
+          timeout = 0;
+        end
+        else begin
+          timeout_count++;
+        end
       end
       
-      // If RVALID not asserted after timeout, force it for testing
-      if (!vif.RVALID) begin
-        `uvm_warning(get_type_name(), "RVALID not asserted, forcing it for testing")
-        force vif.RVALID = 1;
-        force vif.RID = req.id;
-        force vif.RDATA = 64'hDEADBEEF_12345678; // Test data
-        force vif.RRESP = 0;
-        force vif.RLAST = 1;
+      if (timeout) begin
+        `uvm_warning(get_type_name(), "RVALID not asserted after timeout")
+      end
+      else begin
         @(posedge vif.ACLK);
-        release vif.RVALID;
-        release vif.RID;
-        release vif.RDATA;
-        release vif.RRESP;
-        release vif.RLAST;
       end
       
-      @(posedge vif.ACLK);
       vif.RREADY <= 0;
     end
     
