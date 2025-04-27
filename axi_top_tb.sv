@@ -17,17 +17,17 @@ module axi_top_tb;
   `include "axi_environment.svh"
   `include "axi_test.svh"
   
-  // 클럭 및 리셋 신호 - FIXED: 초기값 제거
+  // 클럭 및 리셋 신호
   logic clk;
   logic rstn;
 
-  // 클럭 생성 - FIXED: initial 블록에서만 생성
+  // 클럭 생성
   initial begin
     clk = 0;
     forever #5 clk = ~clk;  // 100MHz 클럭
   end
   
-  // 리셋 생성 - FIXED: initial 블록에서만 생성
+  // 리셋 생성
   initial begin
     rstn = 0;
     #50;
@@ -88,7 +88,7 @@ module axi_top_tb;
   logic           sys_wen;
   logic           sys_ren;
   
-  // FIXED: 메모리 모델 신호와 DUT 입력 신호 분리
+  // 메모리 모델 신호와 DUT 입력 신호 분리
   logic [63:0]    mem_rdata_internal;  // 메모리 모델 내부 출력
   logic           mem_ack_internal;    // 메모리 모델 내부 출력
   logic           mem_err_internal;    // 메모리 모델 내부 출력
@@ -98,7 +98,7 @@ module axi_top_tb;
   logic           mem_ack;    // DUT 입력  
   logic           mem_err;    // DUT 입력
   
-  // FIXED: 메모리 신호 연결
+  // 메모리 신호 연결
   assign mem_rdata = mem_rdata_internal;
   assign mem_ack = mem_ack_internal;
   assign mem_err = mem_err_internal;
@@ -106,7 +106,7 @@ module axi_top_tb;
   // BFM 인스턴스화
   Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
   
-  // 인터페이스 어댑터 인스턴스화 - FIXED: 모든 포트 연결
+  // 인터페이스 어댑터 인스턴스화
   axi_interface_adapter #(
     .AXI_DW(64),
     .AXI_AW(32),
@@ -161,7 +161,7 @@ module axi_top_tb;
     .axi_rvalid_o(axi_rvalid),
     .axi_rready_i(axi_rready),
     
-    // FIXED: 어댑터는 시스템 버스 출력 포트를 연결하되 사용하지 않음
+    // 어댑터는 시스템 버스 출력 포트를 연결하되 사용하지 않음
     .sys_addr_o(),
     .sys_wdata_o(),
     .sys_sel_o(),
@@ -246,7 +246,7 @@ module axi_top_tb;
     end
   end
   
-  // 메모리 액세스 로직 - FIXED: 내부 신호로 출력
+  // 메모리 액세스 로직
   always @(posedge clk) begin
     if (!rstn) begin
       mem_rdata_internal <= 64'h0;
@@ -279,8 +279,14 @@ module axi_top_tb;
   
   // UVM 테스트 시작
   initial begin
-    // 가상 인터페이스 등록
-    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.*", "vif", axi_if);
+    // 가상 인터페이스 등록 - 모든 계층에 명시적으로 설정
+    uvm_config_db#(virtual AXI4)::set(null, "*", "vif", axi_if);
+    
+    // 각 컴포넌트에 대해 명시적으로 인터페이스 설정 (중복되더라도 안전하게)
+    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env", "vif", axi_if);
+    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent", "vif", axi_if);
+    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.driver", "vif", axi_if);
+    uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env.agent.monitor", "vif", axi_if);
     
     // 메일박스 설정
     uvm_config_db#(mailbox #(ABeat #(.N(8), .I(8))))::set(null, "uvm_test_top.env.agent.driver", "ar_mbx", master_bfm.ARmbx);
