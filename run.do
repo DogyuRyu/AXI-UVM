@@ -1,19 +1,23 @@
-# 시뮬레이션 실행 스크립트
+# run.do
 
-# 시뮬레이션 시작
+# Start simulation
 vsim -t 1ps work.axi_top_tb_simple
 
-# 시뮬레이션 로그 설정
+# Set simulation log options
 set StdArithNoWarnings 1
 set NumericStdNoWarnings 1
 log -r /*
 
-# 파형 추가 (경로 수정)
+# Add waveforms
 add wave -position insertpoint sim:/axi_top_tb_simple/*
 add wave -position insertpoint sim:/axi_top_tb_simple/axi_if/*
 
-# 시뮬레이션 실행
+# Add DUT signals (uncomment if you implement DUT and adapter)
+# add wave -position insertpoint sim:/axi_top_tb_simple/dut/*
+# add wave -position insertpoint sim:/axi_top_tb_simple/adapter/*
+
+# Run simulation
 run 10us
 
-# 로그 메시지
-echo "시뮬레이션이 완료되었습니다."
+# Log message
+echo "Simulation completed."
