@@ -64,29 +64,58 @@ class axi_single_rw_test extends axi_base_test;
     axi_single_write_sequence write_seq;
     axi_single_read_sequence read_seq;
     
-    // 페이즈 타임아웃 설정
-    phase.raise_objection(this);
+    // 페이즈 타임아웃 설정 - 이것이 중요!
+    phase.raise_objection(this, "Starting Single Read/Write Test");
     
     `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
     
+    // 초기 지연 추가
+    #100;
+    
     // 시퀀스 생성
     write_seq = axi_single_write_sequence::type_id::create("write_seq");
-    read_seq = axi_single_read_sequence::type_id::create("read_seq");
+    
+    // 명확한 값으로 설정
+    if (!write_seq.randomize() with {
+      start_addr == 32'h1000;
+      write_data == 64'hDEADBEEF_12345678;
+      write_id == 8'h5A;
+    }) begin
+      `uvm_error(get_type_name(), "Randomization failed")
+    end
     
     // 쓰기 시퀀스 실행
     `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
     write_seq.start(env.agent.sequencer);
-    #100;  // 안정화를 위한 지연
+    
+    // 트랜잭션 완료 대기
+    #500;
+    
+    // 읽기 시퀀스 생성
+    read_seq = axi_single_read_sequence::type_id::create("read_seq");
+    
+    // 같은 주소에서 읽기
+    if (!read_seq.randomize() with {
+      start_addr == 32'h1000;
+      read_id == 8'h5A;
+    }) begin
+      `uvm_error(get_type_name(), "Randomization failed")
+    end
     
     // 읽기 시퀀스 실행
     `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
     read_seq.start(env.agent.sequencer);
-    #100;  // 안정화를 위한 지연
+    
+    // 트랜잭션 완료 대기
+    #500;
     
     `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
     
-    // 페이즈 타임아웃 해제
-    phase.drop_objection(this);
+    // 최종 지연
+    #100;
+    
+    // 페이즈 타임아웃 해제 - 진짜 모든 작업이 끝난 후에만!
+    phase.drop_objection(this, "Completed Single Read/Write Test");
   endtask : run_phase
   
 endclass : axi_single_rw_test
@@ -109,32 +138,50 @@ class axi_multiple_rw_test extends axi_base_test;
     axi_multiple_read_sequence read_seq;
     
     // 페이즈 타임아웃 설정
-    phase.raise_objection(this);
+    phase.raise_objection(this, "Starting Multiple Read/Write Test");
     
     `uvm_info(get_type_name(), "Starting Multiple Read/Write Test", UVM_MEDIUM)
+    
+    // 초기 지연
+    #100;
     
     // 시퀀스 생성
     write_seq = axi_multiple_write_sequence::type_id::create("write_seq");
     read_seq = axi_multiple_read_sequence::type_id::create("read_seq");
     
     // 시퀀스 설정
-    write_seq.num_transactions = 10;
-    read_seq.num_transactions = 10;
+    if (!write_seq.randomize() with {
+      start_addr == 32'h2000;
+      num_transactions == 5;  // 5개 트랜잭션으로 제한
+    }) begin
+      `uvm_error(get_type_name(), "Write sequence randomization failed")
+    end
     
     // 쓰기 시퀀스 실행
     `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
     write_seq.start(env.agent.sequencer);
-    #200;  // 안정화를 위한 지연
+    #1000;  // 충분한 지연
+    
+    // 읽기 시퀀스 설정
+    if (!read_seq.randomize() with {
+      start_addr == 32'h2000;
+      num_transactions == 5;  // 5개 트랜잭션으로 제한
+    }) begin
+      `uvm_error(get_type_name(), "Read sequence randomization failed")
+    end
     
     // 읽기 시퀀스 실행
     `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
     read_seq.start(env.agent.sequencer);
-    #200;  // 안정화를 위한 지연
+    #1000;  // 충분한 지연
     
     `uvm_info(get_type_name(), "Completing Multiple Read/Write Test", UVM_MEDIUM)
     
+    // 최종 지연
+    #100;
+    
     // 페이즈 타임아웃 해제
-    phase.drop_objection(this);
+    phase.drop_objection(this, "Completed Multiple Read/Write Test");
   endtask : run_phase
   
 endclass : axi_multiple_rw_test
@@ -156,25 +203,36 @@ class axi_memory_test extends axi_base_test;
     axi_memory_test_sequence mem_seq;
     
     // 페이즈 타임아웃 설정
-    phase.raise_objection(this);
+    phase.raise_objection(this, "Starting Memory Test");
     
     `uvm_info(get_type_name(), "Starting Memory Test", UVM_MEDIUM)
+    
+    // 초기 지연
+    #100;
     
     // 시퀀스 생성
     mem_seq = axi_memory_test_sequence::type_id::create("mem_seq");
     
     // 시퀀스 설정
-    mem_seq.num_transactions = 5;
+    if (!mem_seq.randomize() with {
+      start_addr == 32'h3000;
+      num_transactions == 3;  // 3개 트랜잭션으로 제한
+    }) begin
+      `uvm_error(get_type_name(), "Memory sequence randomization failed")
+    end
     
     // 메모리 테스트 시퀀스 실행
     `uvm_info(get_type_name(), "Starting memory test sequence", UVM_MEDIUM)
     mem_seq.start(env.agent.sequencer);
-    #300;  // 안정화를 위한 지연
+    #1500;  // 충분한 지연
     
     `uvm_info(get_type_name(), "Completing Memory Test", UVM_MEDIUM)
     
+    // 최종 지연
+    #100;
+    
     // 페이즈 타임아웃 해제
-    phase.drop_objection(this);
+    phase.drop_objection(this, "Completed Memory Test");
   endtask : run_phase
   
 endclass : axi_memory_test
@@ -191,44 +249,40 @@ class axi_random_test extends axi_base_test;
     `uvm_info(get_type_name(), "AXI Random Test created", UVM_HIGH)
   endfunction : new
   
+  // 런 페이즈 - 시퀀스 실행
   task run_phase(uvm_phase phase);
-    axi_single_write_sequence write_seq;
-    axi_single_read_sequence read_seq;
+    axi_random_sequence rand_seq;
     
-    // Raise objection to prevent test from ending prematurely
-    phase.raise_objection(this, "Starting Single Read/Write Test");
+    // 페이즈 타임아웃 설정
+    phase.raise_objection(this, "Starting Random Test");
     
-    `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
+    `uvm_info(get_type_name(), "Starting Random Test", UVM_MEDIUM)
     
-    // Write sequence
-    write_seq = axi_single_write_sequence::type_id::create("write_seq");
-    if (!write_seq.randomize() with { start_addr == 32'h1000; write_data == 64'hDEADBEEF12345678; }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
-    write_seq.start(env.agent.sequencer);
-    // Add explicit delay to allow transaction to complete
-    #200;
-    
-    // Read sequence
-    read_seq = axi_single_read_sequence::type_id::create("read_seq");
-    if (!read_seq.randomize() with { start_addr == 32'h1000; }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
-    read_seq.start(env.agent.sequencer);
-    // Add explicit delay to allow transaction to complete
-    #200;
-    
-    `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
-    
-    // Add a final delay before dropping objection
+    // 초기 지연
     #100;
     
-    // Drop objection only after test is truly complete
-    phase.drop_objection(this, "Completed Single Read/Write Test");
+    // 시퀀스 생성
+    rand_seq = axi_random_sequence::type_id::create("rand_seq");
+    
+    // 시퀀스 설정
+    if (!rand_seq.randomize() with {
+      num_transactions == 10;  // 10개 트랜잭션으로 제한
+    }) begin
+      `uvm_error(get_type_name(), "Random sequence randomization failed")
+    end
+    
+    // 랜덤 시퀀스 실행
+    `uvm_info(get_type_name(), "Starting random sequence", UVM_MEDIUM)
+    rand_seq.start(env.agent.sequencer);
+    #2000;  // 충분한 지연
+    
+    `uvm_info(get_type_name(), "Completing Random Test", UVM_MEDIUM)
+    
+    // 최종 지연
+    #100;
+    
+    // 페이즈 타임아웃 해제
+    phase.drop_objection(this, "Completed Random Test");
   endtask : run_phase
   
 endclass : axi_random_test

@@ -95,8 +95,9 @@ class axi_single_write_sequence extends axi_base_sequence;
     super.new(name);
   endfunction
   
+  // For the single_write_sequence task body() method:
   task body();
-    axi_seq_item req;
+    axi_seq_item req, rsp;
     
     req = axi_seq_item::type_id::create("req");
     start_item(req);
@@ -105,12 +106,14 @@ class axi_single_write_sequence extends axi_base_sequence;
     req.data = write_data;
     req.id = write_id;
     req.is_write = 1;
-    req.strb = {8{1'b1}}; // 모든 바이트 활성화
+    req.strb = {8{1'b1}}; // All bytes active
     
     `uvm_info(get_type_name(), $sformatf("Starting single write sequence to addr=0x%0h, data=0x%0h", 
-                                         req.addr, req.data), UVM_MEDIUM)
+                                      req.addr, req.data), UVM_MEDIUM)
     
     finish_item(req);
+    
+    // Wait for response - crucial for synchronization
     get_response(rsp);
     
     `uvm_info(get_type_name(), $sformatf("Completed single write sequence, response=0x%0h", 
@@ -129,8 +132,9 @@ class axi_single_read_sequence extends axi_base_sequence;
     super.new(name);
   endfunction
   
+  // For the single_read_sequence task body() method:
   task body();
-    axi_seq_item req;
+    axi_seq_item req, rsp;
     
     req = axi_seq_item::type_id::create("req");
     start_item(req);
@@ -140,9 +144,11 @@ class axi_single_read_sequence extends axi_base_sequence;
     req.is_write = 0;
     
     `uvm_info(get_type_name(), $sformatf("Starting single read sequence from addr=0x%0h", 
-                                         req.addr), UVM_MEDIUM)
+                                      req.addr), UVM_MEDIUM)
     
     finish_item(req);
+    
+    // Wait for response - crucial for synchronization
     get_response(rsp);
     
     `uvm_info(get_type_name(), $sformatf("Completed single read sequence, data=0x%0h, response=0x%0h", 
