@@ -100,7 +100,7 @@ class axi_scoreboard extends uvm_scoreboard;
                                              item.addr+i, i, data[i*8 +: 8]), UVM_HIGH)
         end
       end
-    }
+    end
     // If read transaction, read data from memory
     else begin
       bit [63:0] data = 0;
@@ -163,7 +163,7 @@ class axi_scoreboard extends uvm_scoreboard;
                                           item.addr, exp_item.resp, item.resp))
         num_mismatches++;
       end
-    }
+    end
     // For read transactions, check both data and response code
     else begin
       if ((exp_item.rdata == item.rdata) && (exp_item.resp == item.resp)) begin

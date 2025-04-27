@@ -127,7 +127,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
         rsp.id = bb.id;
         
         num_write_sent++;
-      }
+      end
       else begin
         // Handle read response
         RBeat #(.N(8), .I(8)) rb;
@@ -177,7 +177,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
                                          req.addr, req.data), UVM_HIGH)
       aw_mbx.put(awbeat);
       w_mbx.put(wbeat);
-    }
+    end
     else begin
       // Process read transaction
       ABeat #(.N(8), .I(8)) arbeat = new();

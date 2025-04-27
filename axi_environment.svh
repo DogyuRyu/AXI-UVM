@@ -48,11 +48,11 @@ class axi_environment extends uvm_env;
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     
-    // Connect agent's monitor to scoreboard
+    // Connect monitor to scoreboard
     agent.monitor.item_collected_port.connect(scoreboard.item_from_monitor);
     
-    // Create a special export in scoreboard for expected transactions from driver
-    // Use transaction export and import pattern instead of direct connection
+    // Connect driver's analysis port to scoreboard's driver export
+    agent.driver.exp_port.connect(scoreboard.item_from_driver_export);
     
     `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
   endfunction : connect_phase
