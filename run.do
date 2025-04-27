@@ -1,7 +1,7 @@
 # run.do
 
 # Start simulation
-vsim -novopt -t 1ps work.axi_top_tb
+vsim -t 1ps work.axi_top_tb
 
 # Set simulation log options
 set StdArithNoWarnings 1
