@@ -1,7 +1,7 @@
 # run.do - Updated for better wave visualization and longer runtime
 
 # Start simulation with visibility preservation
-vsim -voptargs="+acc" -t 1ps work.axi_top_tb
+vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_HIGH -t 1ps work.axi_top_tb
 
 # Set simulation log options
 set StdArithNoWarnings 1
