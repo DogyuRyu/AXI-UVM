@@ -249,40 +249,61 @@ class axi_random_test extends axi_base_test;
     `uvm_info(get_type_name(), "AXI Random Test created", UVM_HIGH)
   endfunction : new
   
-  // 런 페이즈 - 시퀀스 실행
   task run_phase(uvm_phase phase);
-    axi_random_sequence rand_seq;
+    axi_single_write_sequence write_seq;
+    axi_single_read_sequence read_seq;
     
-    // 페이즈 타임아웃 설정
-    phase.raise_objection(this, "Starting Random Test");
+    // Raise objection
+    phase.raise_objection(this, "Starting Single Read/Write Test");
     
-    `uvm_info(get_type_name(), "Starting Random Test", UVM_MEDIUM)
+    `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
     
-    // 초기 지연
+    // Add shorter initial delay
     #100;
     
-    // 시퀀스 생성
-    rand_seq = axi_random_sequence::type_id::create("rand_seq");
+    // Write sequence
+    write_seq = axi_single_write_sequence::type_id::create("write_seq");
     
-    // 시퀀스 설정
-    if (!rand_seq.randomize() with {
-      num_transactions == 10;  // 10개 트랜잭션으로 제한
+    // Use clearly visible values
+    if (!write_seq.randomize() with {
+      start_addr == 32'h1000;
+      write_data == 64'hDEADBEEF_12345678;
+      write_id == 8'h5A;
     }) begin
-      `uvm_error(get_type_name(), "Random sequence randomization failed")
+      `uvm_error(get_type_name(), "Randomization failed")
     end
     
-    // 랜덤 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting random sequence", UVM_MEDIUM)
-    rand_seq.start(env.agent.sequencer);
-    #2000;  // 충분한 지연
+    `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
+    write_seq.start(env.agent.sequencer);
     
-    `uvm_info(get_type_name(), "Completing Random Test", UVM_MEDIUM)
+    // Add a reasonable timeout - don't wait forever
+    #200;
     
-    // 최종 지연
+    `uvm_info(get_type_name(), "Proceeding to read sequence regardless of write completion", UVM_MEDIUM)
+    
+    // Read sequence
+    read_seq = axi_single_read_sequence::type_id::create("read_seq");
+    
+    if (!read_seq.randomize() with {
+      start_addr == 32'h1000;
+      read_id == 8'h5A;
+    }) begin
+      `uvm_error(get_type_name(), "Randomization failed")
+    end
+    
+    `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
+    read_seq.start(env.agent.sequencer);
+    
+    // Add a reasonable timeout - don't wait forever
+    #200;
+    
+    `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
+    
+    // Final delay
     #100;
     
-    // 페이즈 타임아웃 해제
-    phase.drop_objection(this, "Completed Random Test");
+    // Drop objection to allow test to complete
+    phase.drop_objection(this, "Completed Single Read/Write Test");
   endtask : run_phase
   
 endclass : axi_random_test

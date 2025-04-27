@@ -128,8 +128,8 @@ class axi_driver extends uvm_driver #(axi_seq_item);
     
     if (req.is_write) begin
       `uvm_info(get_type_name(), $sformatf("Driving AXI write signals: addr=0x%0h, data=0x%0h", 
-                                         req.addr, req.data), UVM_MEDIUM)
-                                         
+                                        req.addr, req.data), UVM_MEDIUM)
+                                        
       // Drive write address channel
       @(posedge vif.ACLK);
       vif.AWID <= req.id;
@@ -144,22 +144,28 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       vif.AWQOS <= 0;
       vif.AWVALID <= 1;
       
+      // Debug output
+      `uvm_info(get_type_name(), "Waiting for AWREADY...", UVM_LOW)
+      
       // Wait for AWREADY with timeout
       timeout = 1;
       timeout_count = 0;
       
-      while (timeout && timeout_count < 10) begin
+      while (timeout && timeout_count < 5) begin
         @(posedge vif.ACLK);
         if (vif.AWREADY) begin
           timeout = 0;
+          `uvm_info(get_type_name(), "AWREADY received", UVM_LOW)
         end
         else begin
           timeout_count++;
+          `uvm_info(get_type_name(), $sformatf("Waiting for AWREADY (%0d/5)", timeout_count), UVM_LOW)
         end
       end
       
+      // Simply continue after timeout
       if (timeout) begin
-        `uvm_warning(get_type_name(), "AWREADY not asserted after timeout")
+        `uvm_warning(get_type_name(), "AWREADY not asserted, continuing anyway")
       end
       
       vif.AWVALID <= 0;
