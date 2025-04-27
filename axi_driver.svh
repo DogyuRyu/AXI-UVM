@@ -154,9 +154,13 @@ class axi_driver extends uvm_driver #(axi_seq_item);
   
   // Process transaction - convert UVM transaction to BFM transaction
   task process_transaction(axi_seq_item req);
+    // Declare all variables at the beginning of the task
+    ABeat #(.N(8), .I(8)) aw_beat;
+    WBeat #(.N(8)) w_beat;
+    ABeat #(.N(8), .I(8)) ar_beat;
+    
     if (req.is_write) begin
       // Create and populate AXI write address beat
-      ABeat #(.N(8), .I(8)) aw_beat;
       aw_beat = new();
       aw_beat.id = req.id;
       aw_beat.addr = req.addr;
@@ -170,14 +174,13 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       aw_beat.qos = 0;
       
       // Create and populate AXI write data beat
-      WBeat #(.N(8)) w_beat;
       w_beat = new();
       w_beat.data = req.data;
       w_beat.strb = req.strb;
       w_beat.last = 1; // Last transfer
       
       `uvm_info(get_type_name(), $sformatf("Sending write transaction to BFM: addr=0x%0h, data=0x%0h", 
-                                          req.addr, req.data), UVM_HIGH)
+                                         req.addr, req.data), UVM_HIGH)
       
       // Send to BFM via mailboxes
       aw_mbx.put(aw_beat);
@@ -185,7 +188,6 @@ class axi_driver extends uvm_driver #(axi_seq_item);
     end
     else begin
       // Create and populate AXI read address beat
-      ABeat #(.N(8), .I(8)) ar_beat;
       ar_beat = new();
       ar_beat.id = req.id;
       ar_beat.addr = req.addr;
@@ -199,7 +201,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       ar_beat.qos = 0;
       
       `uvm_info(get_type_name(), $sformatf("Sending read transaction to BFM: addr=0x%0h", 
-                                          req.addr), UVM_HIGH)
+                                         req.addr), UVM_HIGH)
       
       // Send to BFM via mailbox
       ar_mbx.put(ar_beat);
@@ -210,7 +212,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
     `uvm_info(get_type_name(), $sformatf("Report: Driver processed %0d transactions (%0d reads, %0d writes)", 
-                                        num_sent, num_read_sent, num_write_sent), UVM_LOW)
+                                       num_sent, num_read_sent, num_write_sent), UVM_LOW)
   endfunction : report_phase
   
 endclass : axi_driver
