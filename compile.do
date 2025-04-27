@@ -25,4 +25,4 @@ vlog -sv +acc=npr axi_slave.v
 # Compile UVM testbench
 vlog -sv +acc=npr axi_top_tb.sv
 
-echo "Compilation completed with +acc option. Run 'run.do' to start the simulation."
+echo "Compilation completed"
