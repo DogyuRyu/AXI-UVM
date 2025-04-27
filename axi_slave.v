@@ -191,7 +191,7 @@ end
 
 
 assign axi_awready_o = !wr_do && !rd_do                      ;
-assign axi_wready_o  = (wr_do && axi_wvalid_i) || (wr_errorw && axi_wvalid_i)    ;
+assign axi_wready_o = axi_wvalid_i;
 assign axi_bid_o     = wr_awid                               ;
 //assign axi_bresp_o   = {wr_error,1'b0}                       ;  // 2'b10 SLVERR 
 //assign axi_bvalid_o  = (sys_wen_o && axi_bready_i) || (wr_error && axi_bready_i)      ;
