@@ -88,20 +88,10 @@ module axi_top_tb;
   logic           sys_wen;
   logic           sys_ren;
   
-  // Separate memory model signals from DUT inputs
+  // Memory model signals
   logic [63:0]    mem_rdata_internal;  // Internal memory model output
   logic           mem_ack_internal;    // Internal memory model output
   logic           mem_err_internal;    // Internal memory model output
-  
-  // Connect memory model to DUT inputs
-  logic [63:0]    mem_rdata;  // DUT input
-  logic           mem_ack;    // DUT input  
-  logic           mem_err;    // DUT input
-  
-  // Memory signal connections
-  assign mem_rdata = mem_rdata_internal;
-  assign mem_ack = mem_ack_internal;
-  assign mem_err = mem_err_internal;
   
   // BFM instantiation
   Axi4MasterBFM #(.N(8), .I(8)) master_bfm(axi_if);
@@ -161,15 +151,16 @@ module axi_top_tb;
     .axi_rvalid_o(axi_rvalid),
     .axi_rready_i(axi_rready),
     
-    // Connect system bus output ports but not used
+    // Connect system bus output ports but don't use them
     .sys_addr_o(),
     .sys_wdata_o(),
     .sys_sel_o(),
     .sys_wen_o(),
     .sys_ren_o(),
-    .sys_rdata_i(mem_rdata),
-    .sys_err_i(mem_err),
-    .sys_ack_i(mem_ack)
+    // Fixed: Use direct memory signals instead of net variables
+    .sys_rdata_i(mem_rdata_internal),
+    .sys_err_i(mem_err_internal),
+    .sys_ack_i(mem_ack_internal)
   );
   
   // DUT instantiation
@@ -231,13 +222,14 @@ module axi_top_tb;
     .sys_sel_o(sys_sel),
     .sys_wen_o(sys_wen),
     .sys_ren_o(sys_ren),
-    .sys_rdata_i(mem_rdata),
-    .sys_err_i(mem_err),
-    .sys_ack_i(mem_ack)
+    // Fixed: Connect directly to memory model signals
+    .sys_rdata_i(mem_rdata_internal),
+    .sys_err_i(mem_err_internal),
+    .sys_ack_i(mem_ack_internal)
   );
   
-  // Memory model
-  reg [63:0] memory [0:1023];  // Simple memory model
+  // Memory model - simplified memory model
+  reg [63:0] memory [0:1023];
   
   // Memory model initialization
   initial begin
