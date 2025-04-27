@@ -8,9 +8,9 @@ module axi_interface_adapter #(
   AXI4 bfm_intf,
   
   // AXI3 signals (DUT side)
-  // global signals - CHANGED FROM OUTPUT TO INPUT
-  input                    axi_clk_i,    // Now input, receives clock
-  input                    axi_rstn_i,   // Now input, receives reset
+  // global signals - inputs from testbench
+  input                    axi_clk_i,    // Receives clock
+  input                    axi_rstn_i,   // Receives reset
   
   // axi write address channel
   output     [ AXI_IW-1: 0] axi_awid_i,
@@ -71,10 +71,9 @@ module axi_interface_adapter #(
   input                     sys_ack_i
 );
 
-  // These assignments need to be reversed since clock and reset are now inputs
-  // We're using the testbench clock and reset to drive the interface
-  assign bfm_intf.ACLK = axi_clk_i;
-  assign bfm_intf.ARESETn = axi_rstn_i;
+  // REMOVED - Do NOT drive interface clock and reset
+  // assign bfm_intf.ACLK = axi_clk_i;
+  // assign bfm_intf.ARESETn = axi_rstn_i;
   
   // Write Address channel connections
   assign axi_awid_i = bfm_intf.AWID;
@@ -122,7 +121,6 @@ module axi_interface_adapter #(
   assign bfm_intf.RVALID = axi_rvalid_o;
   assign axi_rready_i = bfm_intf.RREADY;
   
-  // System bus connections - no assignments needed
-  // All system bus signals are now inputs
+  // No system bus assignments needed
   
 endmodule
