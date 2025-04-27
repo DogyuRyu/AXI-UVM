@@ -21,6 +21,6 @@ vlog -sv axi_interface_adapter.sv
 vlog -sv axi_slave.v
 
 # UVM 테스트벤치 컴파일 (UVM 라이브러리 연결)
-vlog -sv axi_top_tb.sv
+vlog -sv axi_top_tb_simple.sv
 
 echo "컴파일이 완료되었습니다. run.do를 실행하여 시뮬레이션을 시작하세요."
