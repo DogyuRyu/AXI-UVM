@@ -1,19 +1,28 @@
-# 시뮬레이션 실행 스크립트
+# compile.do
 
-# 시뮬레이션 시작
-vsim -t 1ps work.axi_top_tb_simple
+# Delete previous compiled files
+if {[file exists work]} {
+  vdel -all
+}
 
-# 시뮬레이션 로그 설정
-set StdArithNoWarnings 1
-set NumericStdNoWarnings 1
-log -r /*
+# Create library
+vlib work
 
-# 파형 추가 (경로 수정)
-add wave -position insertpoint sim:/axi_top_tb_simple/*
-add wave -position insertpoint sim:/axi_top_tb_simple/axi_if/*
+# Compile interfaces and BFM related files
+vlog -sv interfaces.sv
+vlog -sv Axi4Types.sv
+vlog -sv Axi4.sv
+vlog -sv Axi4Agents.sv
+vlog -sv Axi4Drivers.sv
+vlog -sv Axi4BFMs.sv
 
-# 시뮬레이션 실행
-run 10us
+# Compile interface adapter
+vlog -sv axi_interface_adapter.sv
 
-# 로그 메시지
-echo "시뮬레이션이 완료되었습니다."
+# Compile DUT
+vlog -sv axi_slave.v
+
+# Compile simple testbench
+vlog -sv axi_top_tb_simple.sv
+
+echo "Compilation completed. Run 'run.do' to start the simulation."
