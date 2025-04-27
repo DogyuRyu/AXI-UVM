@@ -46,7 +46,7 @@ module axi_top_tb_simple;
     import pkg_Axi4Types::*;
     
     // 테스트 단계 변수
-    test_stage_t current_test = SINGLE_WRITE;
+    test_stage_t current_test;
     
     // 정확한 파라미터화된 타입으로 객체 선언
     ABeat #(.N(8), .I(8)) ar_beat;
@@ -58,6 +58,10 @@ module axi_top_tb_simple;
     // 테스트용 데이터
     bit [63:0] test_data [16];
     bit [63:0] read_data [16];
+    bit [63:0] expected_data; // 미리 선언
+    
+    // 테스트 초기화
+    current_test = SINGLE_WRITE;
     
     // 테스트 데이터 초기화
     for(int i=0; i<16; i++) begin
@@ -484,10 +488,7 @@ module axi_top_tb_simple;
     
     // 쓰기 응답 수신 대기
     master_bfm.Bmbx.get(b_beat);
-    $display("시간 %0t: 4바이트 쓰기 응답 수신 - ID=%0d, 응답코드=%0d", $time, b_beat.id, b_beat.resp);
-    
-    // 지연
-    #100;
+    $display("시간 %0t: 4바이트 쓰기 응답 수신 - ID=%0d, 응답코드=%0d", $time, b_beat.id, b_beat.resp
     // 4바이트 읽기
     ar_beat = new();
     ar_beat.id = 6;
@@ -569,10 +570,11 @@ module axi_top_tb_simple;
     $display("시간 %0t: 정렬되지 않은 주소 읽기 응답 수신 - 데이터=0x%h", $time, r_beat.data & 32'hFFFFFFFF);
     
     // 데이터 검증 (바이트 1-4)
-    if(((r_beat.data >> 8) & 32'h00FFFFFF) == (32'h87654321 & 32'h00FFFFFF))
-      $display("데이터 검증 성공: 0x%h == 0x%h", (r_beat.data >> 8) & 32'h00FFFFFF, 32'h87654321 & 32'h00FFFFFF);
+    expected_data = ((64'h87654321 & 32'h00FFFFFF) << 8);
+    if(((r_beat.data) & 32'hFFFFFF00) == expected_data)
+      $display("데이터 검증 성공: 0x%h == 0x%h", (r_beat.data) & 32'hFFFFFF00, expected_data);
     else
-      $display("데이터 검증 실패: 0x%h != 0x%h", (r_beat.data >> 8) & 32'h00FFFFFF, 32'h87654321 & 32'h00FFFFFF);
+      $display("데이터 검증 실패: 0x%h != 0x%h", (r_beat.data) & 32'hFFFFFF00, expected_data);
     
     //--------------------------------------------------------------------------
     // 테스트 9: 다양한 ID 사용 트랜잭션
@@ -649,7 +651,7 @@ module axi_top_tb_simple;
       $display("시간 %0t: ID %0d 읽기 응답 수신 - 데이터=0x%h", $time, r_beat.id, r_beat.data);
       
       // 데이터 검증 (ID가 포함된 데이터)
-      bit [63:0] expected_data = 64'hA000_0000_0000_0000 | r_beat.id;
+      expected_data = 64'hA000_0000_0000_0000 | r_beat.id;
       if(r_beat.data == expected_data)
         $display("데이터 검증 성공: 0x%h == 0x%h", r_beat.data, expected_data);
       else
@@ -718,7 +720,7 @@ module axi_top_tb_simple;
                $time, i, r_beat.data, r_beat.last);
       
       // 데이터 검증
-      bit [63:0] expected_data = 64'hB000_0000_0000_0000 | i;
+      expected_data = 64'hB000_0000_0000_0000 | i;
       if(r_beat.data == expected_data)
         $display("데이터 검증 성공: 0x%h == 0x%h", r_beat.data, expected_data);
       else
