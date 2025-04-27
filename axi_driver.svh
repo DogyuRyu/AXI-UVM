@@ -107,13 +107,13 @@ class axi_driver extends uvm_driver #(axi_seq_item);
         // 쓰기 응답 처리 - 응답 코드만 설정
         rsp.resp = 0;  // OKAY 응답
         num_write_sent++;
-      }
+      end
       else begin
         // 읽기 응답 처리 - 간단한 메모리 모델에서 데이터 가져오기
         rsp.rdata = 64'hDEADBEEF_12345678;  // 테스트용 데이터
         rsp.resp = 0;  // OKAY 응답
         num_read_sent++;
-      }
+      end
       
       // 응답 보내기
       seq_item_port.item_done(rsp);
