@@ -158,69 +158,69 @@ module axi_top_tb;
     .sys_ack_i(sys_ack)
   );
   
-  // DUT 인스턴스화
-  axi_slave #(
-    .AXI_DW(64),
-    .AXI_AW(32),
-    .AXI_IW(8),
-    .AXI_SW(8)
-  ) dut (
-    // global signals
-    .axi_clk_i(clk),
-    .axi_rstn_i(rstn),
+  // // DUT 인스턴스화
+  // axi_slave #(
+  //   .AXI_DW(64),
+  //   .AXI_AW(32),
+  //   .AXI_IW(8),
+  //   .AXI_SW(8)
+  // ) dut (
+  //   // global signals
+  //   .axi_clk_i(clk),
+  //   .axi_rstn_i(rstn),
     
-    // AXI 신호 연결
-    .axi_awid_i(axi_awid),
-    .axi_awaddr_i(axi_awaddr),
-    .axi_awlen_i(axi_awlen),
-    .axi_awsize_i(axi_awsize),
-    .axi_awburst_i(axi_awburst),
-    .axi_awlock_i(axi_awlock),
-    .axi_awcache_i(axi_awcache),
-    .axi_awprot_i(axi_awprot),
-    .axi_awvalid_i(axi_awvalid),
-    .axi_awready_o(axi_awready),
+  //   // AXI 신호 연결
+  //   .axi_awid_i(axi_awid),
+  //   .axi_awaddr_i(axi_awaddr),
+  //   .axi_awlen_i(axi_awlen),
+  //   .axi_awsize_i(axi_awsize),
+  //   .axi_awburst_i(axi_awburst),
+  //   .axi_awlock_i(axi_awlock),
+  //   .axi_awcache_i(axi_awcache),
+  //   .axi_awprot_i(axi_awprot),
+  //   .axi_awvalid_i(axi_awvalid),
+  //   .axi_awready_o(axi_awready),
     
-    .axi_wid_i(axi_wid),
-    .axi_wdata_i(axi_wdata),
-    .axi_wstrb_i(axi_wstrb),
-    .axi_wlast_i(axi_wlast),
-    .axi_wvalid_i(axi_wvalid),
-    .axi_wready_o(axi_wready),
+  //   .axi_wid_i(axi_wid),
+  //   .axi_wdata_i(axi_wdata),
+  //   .axi_wstrb_i(axi_wstrb),
+  //   .axi_wlast_i(axi_wlast),
+  //   .axi_wvalid_i(axi_wvalid),
+  //   .axi_wready_o(axi_wready),
     
-    .axi_bid_o(axi_bid),
-    .axi_bresp_o(axi_bresp),
-    .axi_bvalid_o(axi_bvalid),
-    .axi_bready_i(axi_bready),
+  //   .axi_bid_o(axi_bid),
+  //   .axi_bresp_o(axi_bresp),
+  //   .axi_bvalid_o(axi_bvalid),
+  //   .axi_bready_i(axi_bready),
     
-    .axi_arid_i(axi_arid),
-    .axi_araddr_i(axi_araddr),
-    .axi_arlen_i(axi_arlen),
-    .axi_arsize_i(axi_arsize),
-    .axi_arburst_i(axi_arburst),
-    .axi_arlock_i(axi_arlock),
-    .axi_arcache_i(axi_arcache),
-    .axi_arprot_i(axi_arprot),
-    .axi_arvalid_i(axi_arvalid),
-    .axi_arready_o(axi_arready),
+  //   .axi_arid_i(axi_arid),
+  //   .axi_araddr_i(axi_araddr),
+  //   .axi_arlen_i(axi_arlen),
+  //   .axi_arsize_i(axi_arsize),
+  //   .axi_arburst_i(axi_arburst),
+  //   .axi_arlock_i(axi_arlock),
+  //   .axi_arcache_i(axi_arcache),
+  //   .axi_arprot_i(axi_arprot),
+  //   .axi_arvalid_i(axi_arvalid),
+  //   .axi_arready_o(axi_arready),
     
-    .axi_rid_o(axi_rid),
-    .axi_rdata_o(axi_rdata),
-    .axi_rresp_o(axi_rresp),
-    .axi_rlast_o(axi_rlast),
-    .axi_rvalid_o(axi_rvalid),
-    .axi_rready_i(axi_rready),
+  //   .axi_rid_o(axi_rid),
+  //   .axi_rdata_o(axi_rdata),
+  //   .axi_rresp_o(axi_rresp),
+  //   .axi_rlast_o(axi_rlast),
+  //   .axi_rvalid_o(axi_rvalid),
+  //   .axi_rready_i(axi_rready),
     
-    // 시스템 버스 신호 - 직접 인터페이스 어댑터와 메모리 모델에 연결
-    .sys_addr_o(sys_addr),
-    .sys_wdata_o(sys_wdata),
-    .sys_sel_o(sys_sel),
-    .sys_wen_o(sys_wen),
-    .sys_ren_o(sys_ren),
-    .sys_rdata_i(sys_rdata),
-    .sys_err_i(sys_err),
-    .sys_ack_i(sys_ack)
-  );
+  //   // 시스템 버스 신호 - 직접 인터페이스 어댑터와 메모리 모델에 연결
+  //   .sys_addr_o(sys_addr),
+  //   .sys_wdata_o(sys_wdata),
+  //   .sys_sel_o(sys_sel),
+  //   .sys_wen_o(sys_wen),
+  //   .sys_ren_o(sys_ren),
+  //   .sys_rdata_i(sys_rdata),
+  //   .sys_err_i(sys_err),
+  //   .sys_ack_i(sys_ack)
+  // );
   
   // 시스템 버스 응답 생성 (메모리 모델)
   reg [63:0] memory [0:1023];  // 간단한 메모리 모델
