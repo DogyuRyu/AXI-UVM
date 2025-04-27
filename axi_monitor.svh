@@ -12,7 +12,7 @@ class axi_monitor extends uvm_monitor;
   axi_config cfg;
   
   // 가상 인터페이스
-  virtual AXI4 vif;
+  virtual AXI4 #(.N(8), .I(8)) vif;
   
   // 분석 포트 - 트랜잭션을 스코어보드로 전송
   uvm_analysis_port #(axi_seq_item) item_collected_port;
@@ -43,7 +43,7 @@ class axi_monitor extends uvm_monitor;
     end
     
     // 가상 인터페이스 가져오기
-    if (!uvm_config_db#(virtual AXI4)::get(this, "", "vif", vif)) begin
+    if (!uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::get(this, "", "vif", vif)) begin 
       `uvm_fatal(get_type_name(), "No virtual interface found")
     end
     
