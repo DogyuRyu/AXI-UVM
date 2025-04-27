@@ -8,7 +8,7 @@ set StdArithNoWarnings 1
 set NumericStdNoWarnings 1
 log -r /*
 
-# 파형 추가
+# 파형 추가 (경로 수정)
 add wave -position insertpoint sim:/axi_top_tb_simple/*
 add wave -position insertpoint sim:/axi_top_tb_simple/axi_if/*
 
