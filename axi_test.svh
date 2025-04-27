@@ -195,41 +195,40 @@ class axi_random_test extends axi_base_test;
     axi_single_write_sequence write_seq;
     axi_single_read_sequence read_seq;
     
-    // Raise objection to prevent test from ending
-    phase.raise_objection(this);
+    // Raise objection to prevent test from ending prematurely
+    phase.raise_objection(this, "Starting Single Read/Write Test");
     
     `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
     
-    // Add significant delay to allow signal initialization
-    #200;
-    
     // Write sequence
     write_seq = axi_single_write_sequence::type_id::create("write_seq");
-    // Set reasonable transaction values  
-    write_seq.start_addr = 32'h1000;  // Clearly visible address
-    write_seq.write_data = 64'hDEADBEEF_12345678; // Clearly visible pattern
+    if (!write_seq.randomize() with { start_addr == 32'h1000; write_data == 64'hDEADBEEF12345678; }) begin
+      `uvm_error(get_type_name(), "Randomization failed")
+    end
     
     `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
     write_seq.start(env.agent.sequencer);
-    // Longer delay to let transactions complete
-    #500;
+    // Add explicit delay to allow transaction to complete
+    #200;
     
     // Read sequence
     read_seq = axi_single_read_sequence::type_id::create("read_seq");
-    read_seq.start_addr = 32'h1000; // Read from same address
+    if (!read_seq.randomize() with { start_addr == 32'h1000; }) begin
+      `uvm_error(get_type_name(), "Randomization failed")
+    end
     
     `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
     read_seq.start(env.agent.sequencer);
-    // Longer delay to let transactions complete
-    #500;
+    // Add explicit delay to allow transaction to complete
+    #200;
     
     `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
     
-    // Final delay before ending test
-    #300;
+    // Add a final delay before dropping objection
+    #100;
     
-    // Drop objection to allow test to end
-    phase.drop_objection(this);
+    // Drop objection only after test is truly complete
+    phase.drop_objection(this, "Completed Single Read/Write Test");
   endtask : run_phase
   
 endclass : axi_random_test
