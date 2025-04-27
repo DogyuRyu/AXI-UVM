@@ -280,7 +280,7 @@ module axi_top_tb;
   // UVM 테스트 시작
   initial begin
     // 가상 인터페이스 등록 - 모든 계층에 명시적으로 설정
-    uvm_config_db#(virtual AXI4)::set(null, "*", "vif", axi_if);
+    uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::set(null, "*", "vif", axi_if);
     
     // 각 컴포넌트에 대해 명시적으로 인터페이스 설정 (중복되더라도 안전하게)
     uvm_config_db#(virtual AXI4)::set(null, "uvm_test_top.env", "vif", axi_if);
