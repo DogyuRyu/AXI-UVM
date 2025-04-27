@@ -4,11 +4,11 @@ module axi_interface_adapter #(
   parameter AXI_IW = 8,
   parameter AXI_SW = AXI_DW/8
 ) (
-  // AXI4 인터페이스 (BFM 쪽)
+  // AXI4 interface (BFM side)
   AXI4 bfm_intf,
   
-  // AXI3 신호 (DUT 쪽)
-  // global signals
+  // AXI3 signals (DUT side)
+  // global signals - MUST BE INPUT ONLY
   output                    axi_clk_i,
   output                    axi_rstn_i,
   
@@ -58,60 +58,62 @@ module axi_interface_adapter #(
   input                     axi_rvalid_o,
   output                    axi_rready_i,
   
-  // 시스템 버스 신호 (DUT 특화)
+  // System bus signals (FROM DUT)
   input      [ AXI_AW-1: 0] sys_addr_o,
   input      [ AXI_DW-1: 0] sys_wdata_o,
   input      [ AXI_SW-1: 0] sys_sel_o,
   input                     sys_wen_o,
   input                     sys_ren_o,
-  output     [ AXI_DW-1: 0] sys_rdata_i,
-  output                    sys_err_i,
-  output                    sys_ack_i
+  
+  // System bus signals (TO DUT) - CHANGED FROM OUTPUT TO INPUT
+  input      [ AXI_DW-1: 0] sys_rdata_i,
+  input                     sys_err_i,
+  input                     sys_ack_i
 );
 
-  // 클럭 및 리셋 연결
+  // Clock and reset connections
   assign axi_clk_i = bfm_intf.ACLK;
   assign axi_rstn_i = bfm_intf.ARESETn;
   
-  // Write Address 채널 연결
+  // Write Address channel connections
   assign axi_awid_i = bfm_intf.AWID;
   assign axi_awaddr_i = bfm_intf.AWADDR;
-  assign axi_awlen_i = bfm_intf.AWLEN[3:0]; // AXI4 -> AXI3 변환
+  assign axi_awlen_i = bfm_intf.AWLEN[3:0]; // AXI4 -> AXI3 conversion
   assign axi_awsize_i = bfm_intf.AWSIZE;
   assign axi_awburst_i = bfm_intf.AWBURST;
-  assign axi_awlock_i = {1'b0, bfm_intf.AWLOCK}; // AXI4는 1비트, AXI3는 2비트
+  assign axi_awlock_i = {1'b0, bfm_intf.AWLOCK}; // AXI4 is 1-bit, AXI3 is 2-bit
   assign axi_awcache_i = bfm_intf.AWCACHE;
   assign axi_awprot_i = bfm_intf.AWPROT;
   assign axi_awvalid_i = bfm_intf.AWVALID;
   assign bfm_intf.AWREADY = axi_awready_o;
   
-  // Write Data 채널 연결
-  assign axi_wid_i = bfm_intf.AWID; // AXI4에는 WID가 없으므로 AWID 사용
+  // Write Data channel connections
+  assign axi_wid_i = bfm_intf.AWID; // AXI4 has no WID, use AWID
   assign axi_wdata_i = bfm_intf.WDATA;
   assign axi_wstrb_i = bfm_intf.WSTRB;
   assign axi_wlast_i = bfm_intf.WLAST;
   assign axi_wvalid_i = bfm_intf.WVALID;
   assign bfm_intf.WREADY = axi_wready_o;
   
-  // Write Response 채널 연결
+  // Write Response channel connections
   assign bfm_intf.BID = axi_bid_o;
   assign bfm_intf.BRESP = axi_bresp_o;
   assign bfm_intf.BVALID = axi_bvalid_o;
   assign axi_bready_i = bfm_intf.BREADY;
   
-  // Read Address 채널 연결
+  // Read Address channel connections
   assign axi_arid_i = bfm_intf.ARID;
   assign axi_araddr_i = bfm_intf.ARADDR;
-  assign axi_arlen_i = bfm_intf.ARLEN[3:0]; // AXI4 -> AXI3 변환
+  assign axi_arlen_i = bfm_intf.ARLEN[3:0]; // AXI4 -> AXI3 conversion
   assign axi_arsize_i = bfm_intf.ARSIZE;
   assign axi_arburst_i = bfm_intf.ARBURST;
-  assign axi_arlock_i = {1'b0, bfm_intf.ARLOCK}; // AXI4는 1비트, AXI3는 2비트
+  assign axi_arlock_i = {1'b0, bfm_intf.ARLOCK}; // AXI4 is 1-bit, AXI3 is 2-bit
   assign axi_arcache_i = bfm_intf.ARCACHE;
   assign axi_arprot_i = bfm_intf.ARPROT;
   assign axi_arvalid_i = bfm_intf.ARVALID;
   assign bfm_intf.ARREADY = axi_arready_o;
   
-  // Read Data 채널 연결
+  // Read Data channel connections
   assign bfm_intf.RID = axi_rid_o;
   assign bfm_intf.RDATA = axi_rdata_o;
   assign bfm_intf.RRESP = axi_rresp_o;
@@ -119,9 +121,7 @@ module axi_interface_adapter #(
   assign bfm_intf.RVALID = axi_rvalid_o;
   assign axi_rready_i = bfm_intf.RREADY;
   
-  // 시스템 버스 신호 (필요에 따라 연결)
-  assign sys_rdata_i = 64'h0; // 기본값, 필요에 따라 변경
-  assign sys_err_i = 1'b0;     // 기본값, 필요에 따라 변경
-  assign sys_ack_i = 1'b1;     // 기본값, 필요에 따라 변경
+  // System bus connections - NO ASSIGNMENTS HERE
+  // These signals are now inputs and should NOT be driven by this module
   
 endmodule
