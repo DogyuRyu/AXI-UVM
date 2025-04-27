@@ -249,7 +249,7 @@ always @(posedge axi_clk_i) begin
       sys_sel_o  <= {AXI_SW{1'b0}} ;
    end
    else begin
-      sys_wen_o  <= wr_do && axi_wvalid_i && !wr_errorw ;
+      sys_wen_o  <= axi_wvalid_i;
       sys_ren_o  <= axi_arvalid_i && axi_arready_o && !rd_errorw ;
       sys_sel_o  <= {AXI_SW{1'b1}} ;
    end
