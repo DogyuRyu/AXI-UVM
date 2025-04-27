@@ -488,7 +488,7 @@ module axi_top_tb_simple;
     
     // 쓰기 응답 수신 대기
     master_bfm.Bmbx.get(b_beat);
-    $display("시간 %0t: 4바이트 쓰기 응답 수신 - ID=%0d, 응답코드=%0d", $time, b_beat.id, b_beat.resp
+    $display("시간 %0t: 4바이트 쓰기 응답 수신 - ID=%0d, 응답코드=%0d", $time, b_beat.id, b_beat.resp);
     // 4바이트 읽기
     ar_beat = new();
     ar_beat.id = 6;
