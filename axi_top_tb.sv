@@ -165,10 +165,10 @@ module axi_top_tb;
   
   // DUT instantiation
   axi_slave #(
-    .AXI_DW(64),
-    .AXI_AW(32),
-    .AXI_IW(8),
-    .AXI_SW(8)
+    .DATA_WIDTH(64),
+    .ADDR_WIDTH(32),
+    .ID_WIDTH(8),
+    .STRB_WIDTH(8)
   ) dut (
     // global signals
     .axi_clk_i(clk),
