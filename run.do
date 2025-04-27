@@ -1,7 +1,7 @@
-# run.do
+# run.do - Updated to use -voptargs="+acc" instead of -novopt
 
-# Start simulation
-vsim -t 1ps work.axi_top_tb
+# Start simulation with visibility preservation
+vsim -voptargs="+acc" -t 1ps work.axi_top_tb
 
 # Set simulation log options
 set StdArithNoWarnings 1
@@ -11,10 +11,8 @@ log -r /*
 # Add waveforms
 add wave -position insertpoint sim:/axi_top_tb/*
 add wave -position insertpoint sim:/axi_top_tb/axi_if/*
-
-# Add DUT signals (uncomment if you implement DUT and adapter)
-# add wave -position insertpoint sim:/axi_top_tb/dut/*
-# add wave -position insertpoint sim:/axi_top_tb/adapter/*
+add wave -position insertpoint sim:/axi_top_tb/dut/*
+add wave -position insertpoint sim:/axi_top_tb/adapter/*
 
 # Run simulation
 run 10us
