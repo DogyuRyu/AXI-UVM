@@ -97,15 +97,18 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       // Get transaction from sequencer
       seq_item_port.get_next_item(req);
       
-      `uvm_info(get_type_name(), $sformatf("Processing transaction: %s", req.convert2string()), UVM_HIGH)
+      `uvm_info(get_type_name(), $sformatf("Processing transaction: %s", req.convert2string()), UVM_MEDIUM)
       
       // Send expected transaction to scoreboard
       exp_port.write(req);
       
-      // Process transaction - drive directly to interface
+      // Drive transaction directly to interface - ensure signals are driven
       drive_transaction(req);
       
-      // For simplicity, create response immediately
+      // Insert explicit delay to make sure signals are visible (not needed in production)
+      #20;
+      
+      // Create response
       rsp = axi_seq_item::type_id::create("rsp");
       rsp.set_id_info(req);
       rsp.addr = req.addr;
@@ -117,7 +120,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
         num_write_sent++;
       end
       else begin
-        rsp.rdata = 64'hDEADBEEF_12345678;  // Test data
+        rsp.rdata = req.is_write ? 64'hDEADBEEF_12345678 : vif.RDATA;  // Use actual data if possible
         rsp.resp = 0;  // OKAY
         num_read_sent++;
       end
@@ -126,7 +129,7 @@ class axi_driver extends uvm_driver #(axi_seq_item);
       seq_item_port.item_done(rsp);
       num_sent++;
       
-      `uvm_info(get_type_name(), $sformatf("Transaction completed, response: %s", rsp.convert2string()), UVM_HIGH)
+      `uvm_info(get_type_name(), $sformatf("Transaction completed, response: %s", rsp.convert2string()), UVM_MEDIUM)
     end
   endtask : run_phase
   
