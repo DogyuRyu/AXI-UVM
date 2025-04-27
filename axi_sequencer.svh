@@ -1,33 +1,33 @@
 `ifndef AXI_SEQUENCER_SVH
 `define AXI_SEQUENCER_SVH
 
-// AXI 구성 클래스 (시퀀서 및 기타 컴포넌트에서 사용)
+// AXI Configuration class (used in sequencer and other components)
 class axi_config extends uvm_object;
 
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_object_utils(axi_config)
   
-  // AXI 구성 파라미터
-  int AXI_DW = 64;  // 데이터 폭
-  int AXI_AW = 32;  // 주소 폭
-  int AXI_IW = 8;   // ID 폭
-  int AXI_SW;       // 스트로브 폭 (자동 계산)
+  // AXI configuration parameters
+  int AXI_DW = 64;  // Data width
+  int AXI_AW = 32;  // Address width
+  int AXI_IW = 8;   // ID width
+  int AXI_SW;       // Strobe width (automatically calculated)
   
-  // 기타 설정
-  bit has_coverage = 1;             // 커버리지 활성화 여부
-  bit has_checks = 1;               // 체크 활성화 여부
-  int unsigned outstanding_req = 8; // 최대 동시 요청 수
-  int unsigned max_transaction_time_ns = 1000; // 최대 트랜잭션 시간 (ns)
+  // Other settings
+  bit has_coverage = 1;             // Enable coverage
+  bit has_checks = 1;               // Enable checks
+  int unsigned outstanding_req = 8; // Maximum concurrent requests
+  int unsigned max_transaction_time_ns = 1000; // Maximum transaction time (ns)
   
-  // 생성자
+  // Constructor
   function new(string name = "axi_config");
     super.new(name);
-    // 스트로브 폭은 데이터 폭의 1/8
+    // Strobe width is data width / 8
     AXI_SW = AXI_DW >> 3;
     `uvm_info(get_type_name(), "AXI configuration created", UVM_HIGH)
   endfunction : new
   
-  // 구성 정보 출력 함수
+  // Convert to string function
   virtual function string convert2string();
     string s;
     s = super.convert2string();
@@ -42,7 +42,7 @@ class axi_config extends uvm_object;
     return s;
   endfunction : convert2string
   
-  // 구성 설정 복사 함수
+  // Copy configuration function
   virtual function void copy_config(axi_config cfg);
     this.AXI_DW = cfg.AXI_DW;
     this.AXI_AW = cfg.AXI_AW;
@@ -57,44 +57,49 @@ class axi_config extends uvm_object;
   
 endclass : axi_config
 
-// AXI Sequencer 클래스
-// axi_seq_item 타입의 트랜잭션을 처리하는 UVM sequencer
+// AXI Sequencer class
+// UVM sequencer for axi_seq_item transactions
 class axi_sequencer extends uvm_sequencer #(axi_seq_item);
   
-  // UVM 매크로 선언
+  // UVM macro declaration
   `uvm_component_utils(axi_sequencer)
   
-  // 구성 객체 (설정 가능한 파라미터)
+  // Configuration object (configurable parameters)
   axi_config cfg;
   
-  // 시퀀서 생성자
+  // Transaction counter
+  int num_transactions;
+  
+  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
+    num_transactions = 0;
     `uvm_info(get_type_name(), "AXI Sequencer created", UVM_HIGH)
   endfunction : new
   
-  // 빌드 페이즈 - 구성 객체 획득
+  // Build phase - get configuration object
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 가져오기 (있는 경우)
+    // Get configuration object (if available)
     if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
       `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
       cfg = axi_config::type_id::create("default_cfg");
     end
   endfunction : build_phase
   
-  // 연결 페이즈
+  // Connect phase
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
   endfunction : connect_phase
   
-  // 종료 페이즈 - 시퀀서 통계 출력
+  // Report phase - output sequencer statistics
   function void report_phase(uvm_phase phase);
     super.report_phase(phase);
+    // FIXED: Use num_transactions instead of trying to call seq_item_export.count()
     `uvm_info(get_type_name(), $sformatf("Report: Sequencer processed %0d transactions", 
-                                       this.seq_item_export.count()), UVM_LOW)
+                                       num_transactions), UVM_LOW)
   endfunction : report_phase
   
 endclass : axi_sequencer
