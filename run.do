@@ -1,15 +1,14 @@
-# run.do - Run multiple tests sequentially after compile
+# run.do - for single simulation
 
-# Run axi_single_rw_test
-vsim -c -do "vsim -voptargs=\"+acc\" +UVM_TESTNAME=axi_single_rw_test -t 1ps work.axi_top_tb; run -all; quit"
+# Start simulation
+vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=axi_single_rw_test -t 1ps work.axi_top_tb
 
-# Run axi_multiple_rw_test
-vsim -c -do "vsim -voptargs=\"+acc\" +UVM_TESTNAME=axi_multiple_rw_test -t 1ps work.axi_top_tb; run -all; quit"
+# Optional logging
+set StdArithNoWarnings 1
+set NumericStdNoWarnings 1
+log -r /*
 
-# Run axi_memory_test
-vsim -c -do "vsim -voptargs=\"+acc\" +UVM_TESTNAME=axi_memory_test -t 1ps work.axi_top_tb; run -all; quit"
+# Run simulation
+run -all
 
-# Run axi_random_test
-vsim -c -do "vsim -voptargs=\"+acc\" +UVM_TESTNAME=axi_random_test -t 1ps work.axi_top_tb; run -all; quit"
-
-echo "All tests completed."
+echo "Simulation completed."
