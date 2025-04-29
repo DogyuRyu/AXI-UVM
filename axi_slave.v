@@ -184,47 +184,45 @@ always @* begin
             end
         end
         WRITE_STATE_BURST: begin
-            // Always keep WREADY high during burst to improve handshaking
+            // Always keep WREADY high during burst
             s_axi_wready_next = 1'b1;
 
             if (s_axi_wready && s_axi_wvalid) begin
                 mem_wr_en = 1'b1;
-                
-                // Update address based on burst type
+                // Only update address for INCR or WRAP burst types
                 if (write_burst_reg != 2'b00) begin
-                    // INCR or WRAP burst
                     write_addr_next = write_addr_reg + (1 << write_size_reg);
                 end
-                // For FIXED bursts, address stays the same
                 
+                // Decrement burst counter
                 write_count_next = write_count_reg - 1;
                 
                 if (write_count_reg > 0) begin
                     // Continue burst
                     write_state_next = WRITE_STATE_BURST;
-                    s_axi_wready_next = 1'b1;  // Keep WREADY high
                 end else begin
-                    // End of burst
-                    if (s_axi_wlast == 1'b0) begin
-                        // WLAST should be set - error condition
-                        $display("AXI Error: WLAST not set on final data beat");
+                    // Last beat of burst
+                    if (s_axi_wlast != 1'b1) begin
+                        // Debug message only, don't halt simulation
+                        $display("AXI Warning: WLAST not set on final data beat");
                     end
                     
+                    // Move to response phase
+                    s_axi_wready_next = 1'b0; // Stop accepting data
+                    
                     if (s_axi_bready || !s_axi_bvalid) begin
-                        // Can move to response phase immediately
+                        // Can send response immediately
                         s_axi_bid_next = write_id_reg;
                         s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = 1'b1;  // Ready for next transaction
-                        s_axi_wready_next = 1'b0;   // No longer accepting data
+                        s_axi_awready_next = 1'b1; // Ready for next transaction
                         write_state_next = WRITE_STATE_IDLE;
                     end else begin
                         // Wait for BREADY
-                        s_axi_wready_next = 1'b0;
                         write_state_next = WRITE_STATE_RESP;
                     end
                 end
             end else begin
-                // Wait for valid data
+                // Keep waiting for data
                 write_state_next = WRITE_STATE_BURST;
             end
         end
