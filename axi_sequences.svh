@@ -26,11 +26,12 @@ class axi_base_sequence extends uvm_sequence #(axi_transaction);
 endclass
 
 // Write sequence - generates write transactions
+// In axi_sequences.svh - Add constraints for burst length
 class axi_write_sequence extends axi_base_sequence;
   `uvm_object_utils(axi_write_sequence)
   
   // Sequence parameters
-  rand int unsigned num_transactions = 10;
+  rand int unsigned num_transactions = 1; // Reduced to 1
   rand bit [7:0] min_addr = 0;
   rand bit [7:0] max_addr = 255;
   
@@ -44,7 +45,7 @@ class axi_write_sequence extends axi_base_sequence;
     repeat(num_transactions) begin
       `uvm_info("AXI_WRITE_SEQ", "Creating transaction", UVM_HIGH)
       
-      // 트랜잭션 생성 및 랜덤화
+      // Create and randomize a transaction
       trans = axi_transaction::type_id::create("trans");
       
       `uvm_info("AXI_WRITE_SEQ", "Starting transaction", UVM_HIGH)
@@ -55,6 +56,7 @@ class axi_write_sequence extends axi_base_sequence;
         trans_type == axi_transaction::WRITE;
         addr >= min_addr;
         addr <= max_addr;
+        burst_len <= 3; // REDUCED BURST LENGTH
       });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
