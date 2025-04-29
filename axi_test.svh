@@ -103,7 +103,7 @@ class axi_read_test extends axi_base_test;
     super.new(name, parent);
   endfunction
   
-  // In axi_read_test class, Run phase
+  // Run phase
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
     
@@ -115,42 +115,23 @@ class axi_read_test extends axi_base_test;
     write_seq.num_transactions = 2;
     read_seq.num_transactions = 2;
     
-    // Force first transaction to be WRAP, second to be FIXED
-    axi_transaction trans1, trans2;
-    trans1 = axi_transaction::type_id::create("trans1");
-    trans2 = axi_transaction::type_id::create("trans2");
-    
-    // Configure first transaction as WRAP
-    assert(trans1.randomize() with {
-      trans_type == axi_transaction::WRITE;
-      burst_type == WRAP;
-      burst_len <= 3;
-    });
-    
-    // Configure second transaction as FIXED with burst_len=0
-    assert(trans2.randomize() with {
-      trans_type == axi_transaction::WRITE;
-      burst_type == FIXED;
-      burst_len == 0;
-    });
-    
     phase.raise_objection(this);
     `uvm_info("AXI_READ_TEST", "Starting read test", UVM_LOW)
     
-    // Use the predefined transactions
-    start_item(trans1);
-    finish_item(trans1);
+    // First write data
+    `uvm_info("AXI_READ_TEST", "Starting write sequence", UVM_LOW)
+    write_seq.start(env.agent.sequencer);
+    `uvm_info("AXI_READ_TEST", "Write sequence completed", UVM_LOW)
     
-    start_item(trans2);
-    finish_item(trans2);
-    
-    // Continue with read sequence
+    // Then read it back
     `uvm_info("AXI_READ_TEST", "Starting read sequence", UVM_LOW)
     read_seq.start(env.agent.sequencer);
+    `uvm_info("AXI_READ_TEST", "Read sequence completed", UVM_LOW)
     
     `uvm_info("AXI_READ_TEST", "Read test completed", UVM_LOW)
     phase.drop_objection(this);
   endtask
+  
 endclass
 
 // Burst test class - tests burst transfers

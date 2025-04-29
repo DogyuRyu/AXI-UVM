@@ -81,14 +81,14 @@ class axi_transaction extends uvm_sequence_item;
   // Burst type specific constraints
   constraint burst_constraints {
     if (burst_type == FIXED) {
-      // Force FIXED bursts to have exactly one data beat
+      // For FIXED bursts, limit to burst_len=0 (one data beat)
       burst_len == 0;
-      // Control burst size for stability
+      // Limit burst_size for stability
       burst_size inside {0, 1, 2};
     }
     else if (burst_type == WRAP) {
       burst_len inside {1, 3, 7, 15};
-      // WRAP mode address alignment requirement
+      // For WRAP mode, address must be aligned to the boundary
       (addr % (2**burst_size * (burst_len+1))) == 0;
     }
   }
