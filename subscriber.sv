@@ -7,6 +7,14 @@ class subscriber extends uvm_subscriber#(transaction);
    transaction trans;
    uvm_tlm_analysis_fifo#(transaction) mon2scor;
    
+   // 먼저 변수 선언
+   int write_data_count;
+   int read_data_count;
+   int wdata;
+   int rdata;
+   int awaddr;
+   int araddr;
+   
    // covergroup 정의
    covergroup axi_cg;
       cp1:coverpoint awaddr {bins b1={[0:16'hffff]};}
@@ -29,12 +37,6 @@ class subscriber extends uvm_subscriber#(transaction);
       axi_cg.sample();
    endfunction
 
-   int write_data_count;
-   int read_data_count;
-   int wdata;
-   int rdata;
-   int awaddr;
-   int araddr;
    task run_phase(uvm_phase phase);
       forever begin
          mon2scor.get(trans);
