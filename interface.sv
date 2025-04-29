@@ -1,6 +1,9 @@
 `ifndef AXI_INTERFACE 
 `define AXI_INTERFACE
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 interface axi_interface(input clk);
 
     // Width of data bus in bits
