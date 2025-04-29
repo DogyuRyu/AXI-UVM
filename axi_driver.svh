@@ -37,13 +37,13 @@ class axi_driver extends uvm_driver #(axi_transaction);
   virtual task run_phase(uvm_phase phase);
     `uvm_info("AXI_DRIVER", "Driver starting...", UVM_MEDIUM)
     
-    // 신호 초기화
+    // Initialize signals
     initialize_signals();
     `uvm_info("AXI_DRIVER", "Signals initialized", UVM_MEDIUM)
     
-    // 메인 드라이버 루프
+    // Main driver loop
     forever begin
-      // 리셋 조건 처리
+      // Handle reset condition
       @(posedge vif.clk);
       `uvm_info("AXI_DRIVER", $sformatf("Clock edge, reset = %0d", vif.rst), UVM_HIGH)
       
@@ -57,12 +57,12 @@ class axi_driver extends uvm_driver #(axi_transaction);
         continue;
       end
       
-      // 시퀀서로부터 트랜잭션 가져오기
+      // Get transaction from sequencer
       `uvm_info("AXI_DRIVER", "Waiting for transaction from sequencer", UVM_HIGH)
       seq_item_port.get_next_item(current_trans);
       `uvm_info("AXI_DRIVER", $sformatf("Received transaction: %s", current_trans.convert2string()), UVM_MEDIUM)
       
-      // 트랜잭션 처리
+      // Process transaction
       case(current_trans.trans_type)
         axi_transaction::WRITE: begin
           `uvm_info("AXI_DRIVER", "Processing WRITE transaction", UVM_MEDIUM)
@@ -132,7 +132,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
   virtual task drive_write_address(axi_transaction trans);
     `uvm_info("AXI_DRIVER", "Setting up write address channel signals", UVM_HIGH)
     
-    // 주소 채널 신호 설정
+    // Set address channel signals
     vif.m_drv_cb.AWID     <= trans.id;
     vif.m_drv_cb.AWADDR   <= trans.addr;
     vif.m_drv_cb.AWLEN    <= trans.burst_len;
@@ -145,7 +145,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
     
     `uvm_info("AXI_DRIVER", "Waiting for AWREADY", UVM_HIGH)
     
-    // AWREADY 대기 with timeout
+    // Wait for AWREADY with timeout
     fork
       begin: timeout_block
         repeat(1000) @(vif.m_drv_cb);
@@ -164,20 +164,21 @@ class axi_driver extends uvm_driver #(axi_transaction);
     
     `uvm_info("AXI_DRIVER", "AWREADY received", UVM_HIGH)
     
-    // 주소 채널 신호 클리어
+    // Clear address channel signals
     vif.m_drv_cb.AWVALID  <= 0;
     `uvm_info("AXI_DRIVER", "Write address phase completed", UVM_MEDIUM)
   endtask
   
   // Drive write data channel
   virtual task drive_write_data(axi_transaction trans);
+    bit timeout_detected;
+    bit reset_detected;
+    int i;
+    
     // Send burst data
     `uvm_info("AXI_DRIVER", $sformatf("Driving %0d data beats", trans.burst_len+1), UVM_MEDIUM)
     
-    bit timeout_detected;
-    bit reset_detected;
-    
-    for(int i = 0; i <= trans.burst_len; i++) begin
+    for(i = 0; i <= trans.burst_len; i++) begin
       // Setup data channel signals
       `uvm_info("AXI_DRIVER", $sformatf("Setting up data beat %0d/%0d: DATA=0x%h", i+1, trans.burst_len+1, trans.data[i]), UVM_HIGH)
       vif.m_drv_cb.WDATA   <= trans.data[i];
@@ -223,12 +224,6 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Handshake complete", i+1), UVM_HIGH)
     end
-    
-    // Clear data channel signals
-    vif.m_drv_cb.WVALID  <= 0;
-    vif.m_drv_cb.WLAST   <= 0;
-    `uvm_info("AXI_DRIVER", "Write data phase completed", UVM_MEDIUM)
-  endtask
     
     // Clear data channel signals
     vif.m_drv_cb.WVALID  <= 0;
@@ -289,6 +284,8 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Receive read data
   virtual task receive_read_data(axi_transaction trans);
+    int i;
+    
     // Allocate data and response arrays
     trans.data = new[trans.burst_len + 1];
     trans.resp = new[trans.burst_len + 1];
@@ -298,7 +295,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
     vif.m_drv_cb.RREADY <= 1;
     
     // Receive data for each burst
-    for(int i = 0; i <= trans.burst_len; i++) begin
+    for(i = 0; i <= trans.burst_len; i++) begin
       // Wait for RVALID
       do begin
         @(vif.m_drv_cb);
