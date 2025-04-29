@@ -63,7 +63,7 @@ module tb_top;
   
   // Timeout mechanism
   initial begin
-    #1000000000000; // 1ms timeout
+    #1000000000;
     $display("ERROR: Simulation timeout at %t", $time);
     $finish;
   end
