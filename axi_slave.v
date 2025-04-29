@@ -184,36 +184,42 @@ always @* begin
             end
         end
         WRITE_STATE_BURST: begin
-            // Always assert WREADY in BURST state
+            // 버스트 상태에서는 항상 WREADY 활성화
             s_axi_wready_next = 1'b1;
 
+            // 디버그: 상태 출력
+            $display("Time=%0t: STATE=BURST, cnt=%0d, wvalid=%0b, wlast=%0b", 
+                    $time, write_count_reg, s_axi_wvalid, s_axi_wlast);
+
             if (s_axi_wready && s_axi_wvalid) begin
+                // 데이터가 유효하면 메모리에 쓰기
                 mem_wr_en = 1'b1;
                 
-                // For FIXED bursts, address remains the same
+                // FIXED가 아닌 경우에만 주소 업데이트
                 if (write_burst_reg != 2'b00) begin
                     write_addr_next = write_addr_reg + (1 << write_size_reg);
                 end
                 
-                // Check if this is the last beat (either by WLAST or counter)
-                if (s_axi_wlast) begin
-                    // Move to response phase when WLAST is received
-                    write_count_next = 0;
-                    
+                // 주요 수정: WLAST 신호가 없으면 계속 BURST 상태 유지
+                if (!s_axi_wlast) begin
+                    write_count_next = write_count_reg - 1;
+                    write_state_next = WRITE_STATE_BURST;
+                    s_axi_wready_next = 1'b1; // 계속 데이터 수신 준비
+                end else begin
+                    // WLAST 신호가 있으면 응답 단계로 전환
                     if (s_axi_bready || !s_axi_bvalid) begin
                         s_axi_bid_next = write_id_reg;
                         s_axi_bvalid_next = 1'b1;
                         s_axi_awready_next = 1'b1;
+                        s_axi_wready_next = 1'b0; // 응답 상태에서는 데이터 수신 중지
                         write_state_next = WRITE_STATE_IDLE;
                     end else begin
+                        s_axi_wready_next = 1'b0;
                         write_state_next = WRITE_STATE_RESP;
                     end
-                end else begin
-                    // Not the last beat
-                    write_count_next = write_count_reg - 1;
-                    write_state_next = WRITE_STATE_BURST;
                 end
             end else begin
+                // 데이터 유효 신호 대기
                 write_state_next = WRITE_STATE_BURST;
             end
         end
