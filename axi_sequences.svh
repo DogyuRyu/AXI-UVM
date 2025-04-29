@@ -30,7 +30,7 @@ class axi_write_sequence extends axi_base_sequence;
   `uvm_object_utils(axi_write_sequence)
   
   // Sequence parameters
-  rand int unsigned num_transactions = 1; // Default to 1 transaction
+  rand int unsigned num_transactions = 1; // Reduced to 1
   rand bit [7:0] min_addr = 0;
   rand bit [7:0] max_addr = 255;
   
@@ -40,12 +40,6 @@ class axi_write_sequence extends axi_base_sequence;
   
   virtual task body();
     `uvm_info("AXI_WRITE_SEQ", $sformatf("Starting write sequence with %0d transactions", num_transactions), UVM_MEDIUM)
-    
-    // Force to max 2 transactions for better stability
-    if (num_transactions > 2) begin
-      num_transactions = 2;
-      `uvm_info("AXI_WRITE_SEQ", "Limiting to 2 transactions for stability", UVM_MEDIUM)
-    end
     
     repeat(num_transactions) begin
       `uvm_info("AXI_WRITE_SEQ", "Creating transaction", UVM_HIGH)
@@ -61,14 +55,21 @@ class axi_write_sequence extends axi_base_sequence;
         trans_type == axi_transaction::WRITE;
         addr >= min_addr;
         addr <= max_addr;
-        burst_len <= 3;  // Max 4 data beats
+        
+        // Limit burst length to avoid overwhelming the slave
+        burst_len <= 7;  // Max 8 data beats
+        
+        // Force FIXED bursts to have exactly one data beat
+        if (burst_type == FIXED) {
+          burst_len == 0;
+        }
       });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
       
-      // Add delay between transactions
-      #5000;
+      // Add a delay between transactions to allow the slave to reset internal state
+      #5000;  // 5us delay
       
       `uvm_info("AXI_WRITE_SEQ", "Transaction completed", UVM_HIGH)
     end
@@ -82,7 +83,7 @@ class axi_read_sequence extends axi_base_sequence;
   `uvm_object_utils(axi_read_sequence)
   
   // Sequence parameters
-  rand int unsigned num_transactions = 2;  // Default to 2 transactions
+  rand int unsigned num_transactions = 10;
   rand bit [7:0] min_addr = 0;
   rand bit [7:0] max_addr = 255;
   
@@ -91,14 +92,6 @@ class axi_read_sequence extends axi_base_sequence;
   endfunction
   
   virtual task body();
-    `uvm_info("AXI_READ_SEQ", $sformatf("Starting read sequence with %0d transactions", num_transactions), UVM_MEDIUM)
-    
-    // Force to max 2 transactions for better stability
-    if (num_transactions > 2) begin
-      num_transactions = 2;
-      `uvm_info("AXI_READ_SEQ", "Limiting to 2 transactions for stability", UVM_MEDIUM)
-    }
-    
     repeat(num_transactions) begin
       // Create and randomize a transaction
       trans = axi_transaction::type_id::create("trans");
@@ -108,17 +101,9 @@ class axi_read_sequence extends axi_base_sequence;
         trans_type == axi_transaction::READ;
         addr >= min_addr;
         addr <= max_addr;
-        burst_len <= 2;  // Max 3 data beats for reads
       });
-      
-      `uvm_info("AXI_READ_SEQ", $sformatf("Randomized read transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
-      
-      // Add delay between transactions
-      #5000;
     end
-    
-    `uvm_info("AXI_READ_SEQ", "Read sequence completed", UVM_MEDIUM)
   endtask
 endclass
 
@@ -134,40 +119,78 @@ class axi_burst_write_sequence extends axi_write_sequence;
   endfunction
   
   virtual task body();
-    `uvm_info("AXI_BURST_WRITE_SEQ", $sformatf("Starting burst write sequence with %0d transactions", num_transactions), UVM_MEDIUM)
-    
-    // Force to max 2 transactions for better stability
-    if (num_transactions > 2) begin
-      num_transactions = 2;
-      `uvm_info("AXI_BURST_WRITE_SEQ", "Limiting to 2 transactions for stability", UVM_MEDIUM)
-    end
     repeat(num_transactions) begin
-            // Create and randomize a transaction with specific burst type
-            trans = axi_transaction::type_id::create("trans");
-            
-            start_item(trans);
-            assert(trans.randomize() with {
-                trans_type == axi_transaction::WRITE;
-                addr >= min_addr;
-                addr <= max_addr;
-                burst_type == burst_type_to_test;
-                
-                // Special handling for FIXED bursts
-                if (burst_type_to_test == FIXED) {
-                    burst_len == 0;  // Only one data beat for FIXED
-                } else {
-                    burst_len <= 2;  // Max 3 beats for other types
-                }
-            });
-            
-            `uvm_info("AXI_BURST_WRITE_SEQ", $sformatf("Randomized burst write transaction: %s", trans.convert2string()), UVM_MEDIUM)
-            finish_item(trans);
-            
-            // Add delay between transactions
-            #5000;
-        end
+      // Create and randomize a transaction with specific burst type
+      trans = axi_transaction::type_id::create("trans");
+      
+      start_item(trans);
+      assert(trans.randomize() with {
+        trans_type == axi_transaction::WRITE;
+        addr >= min_addr;
+        addr <= max_addr;
+        burst_type == burst_type_to_test;
         
-        `uvm_info("AXI_BURST_WRITE_SEQ", "Burst write sequence completed", UVM_MEDIUM)
-    endtask
+        // Let transaction constraints handle burst_len based on burst_type
+      });
+      finish_item(trans);
+    end
+  endtask
 endclass
 
+// Burst read sequence - specifically for testing burst transfers
+class axi_burst_read_sequence extends axi_read_sequence;
+  `uvm_object_utils(axi_burst_read_sequence)
+  
+  // Burst type to test
+  rand axi_burst_type_e burst_type_to_test;
+  
+  function new(string name = "axi_burst_read_sequence");
+    super.new(name);
+  endfunction
+  
+  virtual task body();
+    repeat(num_transactions) begin
+      // Create and randomize a transaction with specific burst type
+      trans = axi_transaction::type_id::create("trans");
+      
+      start_item(trans);
+      assert(trans.randomize() with {
+        trans_type == axi_transaction::READ;
+        addr >= min_addr;
+        addr <= max_addr;
+        burst_type == burst_type_to_test;
+      });
+      finish_item(trans);
+    end
+  endtask
+endclass
+
+// Mixed sequence - generates both read and write transactions
+class axi_mixed_sequence extends axi_base_sequence;
+  `uvm_object_utils(axi_mixed_sequence)
+  
+  // Sequence parameters
+  rand int unsigned num_transactions = 20;
+  rand bit [7:0] min_addr = 0;
+  rand bit [7:0] max_addr = 255;
+  
+  function new(string name = "axi_mixed_sequence");
+    super.new(name);
+  endfunction
+  
+  virtual task body();
+    repeat(num_transactions) begin
+      // Create and randomize a transaction
+      trans = axi_transaction::type_id::create("trans");
+      
+      start_item(trans);
+      assert(trans.randomize() with {
+        addr >= min_addr;
+        addr <= max_addr;
+      });
+      finish_item(trans);
+    end
+  endtask
+endclass
+
+`endif // AXI_SEQUENCES_SVH

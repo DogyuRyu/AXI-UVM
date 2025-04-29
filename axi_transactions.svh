@@ -96,6 +96,7 @@ class axi_transaction extends uvm_sequence_item;
     }
   }
 
+
   // STRB constraint (applies only to writes)
   constraint strb_constraints {
     if (trans_type == WRITE) {
