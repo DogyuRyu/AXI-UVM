@@ -67,6 +67,7 @@ class axi_write_sequence extends axi_base_sequence;
             strb[i] == {STRB_WIDTH{1'b1}}; // All bytes enabled
           }
         }
+      });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
@@ -130,10 +131,11 @@ class axi_burst_write_sequence extends axi_write_sequence;
         addr <= max_addr;
         burst_type == burst_type_to_test;
         
-        if (burst_type == FIXED) {
-          burst_len == 0;
+        // FIXED 버스트 타입이 선택된 경우 특별 처리 추가
+        if (burst_type_to_test == FIXED) {
+          burst_len == 0; // 1개의 데이터 비트만 전송
         } else {
-          burst_len > 0;
+          burst_len > 0; // 다른 버스트 타입은 여러 비트 전송 가능
         }
       });
       finish_item(trans);
@@ -189,7 +191,7 @@ class axi_mixed_sequence extends axi_base_sequence;
       trans = axi_transaction::type_id::create("trans");
       
       start_item(trans);
-      assert(trans.randomize() with {`
+      assert(trans.randomize() with {
         addr >= min_addr;
         addr <= max_addr;
       });
