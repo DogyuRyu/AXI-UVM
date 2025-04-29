@@ -1,311 +1,210 @@
+//------------------------------------------------------------------------------
+// File: axi_test.svh
+// Description: AXI Test Classes for UVM testbench
+//------------------------------------------------------------------------------
+
 `ifndef AXI_TEST_SVH
 `define AXI_TEST_SVH
 
-// AXI 기본 테스트 클래스
+// Base test class
 class axi_base_test extends uvm_test;
-  
-  // UVM 매크로 선언
   `uvm_component_utils(axi_base_test)
   
-  // 환경 및 구성 객체
-  axi_environment env;
-  axi_config cfg;
+  // Environment
+  axi_env env;
   
-  // 생성자
-  function new(string name = "axi_base_test", uvm_component parent = null);
+  // Virtual interface
+  virtual axi_intf vif;
+  
+  // Constructor
+  function new(string name, uvm_component parent);
     super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Base Test created", UVM_HIGH)
-  endfunction : new
+  endfunction
   
-  // 빌드 페이즈 - 컴포넌트 생성
+  // Build phase
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // 구성 객체 생성
-    cfg = axi_config::type_id::create("cfg");
+    // Create environment
+    env = axi_env::type_id::create("env", this);
     
-    // 환경 생성
-    env = axi_environment::type_id::create("env", this);
+    // Get virtual interface from config DB
+    if(!uvm_config_db#(virtual axi_intf)::get(this, "", "vif", vif))
+      `uvm_fatal("AXI_BASE_TEST", "Virtual interface must be set for test!")
     
-    // 구성 객체 설정
-    cfg.AXI_DW = 64;  // 64비트 데이터 폭
-    cfg.AXI_AW = 32;  // 32비트 주소 폭
-    cfg.AXI_IW = 8;   // 8비트 ID 폭
-    cfg.AXI_SW = cfg.AXI_DW >> 3;  // 8바이트 스트로브 폭
+    // Pass interface to environment
+    uvm_config_db#(virtual axi_intf)::set(this, "env", "vif", vif);
+  endfunction
+  
+  // End of elaboration phase
+  function void end_of_elaboration_phase(uvm_phase phase);
+    super.end_of_elaboration_phase(phase);
     
-    // 구성 객체 전달
-    uvm_config_db#(axi_config)::set(this, "env", "cfg", cfg);
-    
-    `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
-  endfunction : build_phase
+    // Print topology
+    uvm_top.print_topology();
+  endfunction
   
-  // 종료 페이즈 - 테스트 통계 출력
-  function void report_phase(uvm_phase phase);
-    super.report_phase(phase);
-    `uvm_info(get_type_name(), "Report: AXI Base Test completed", UVM_LOW)
-  endfunction : report_phase
-  
-endclass : axi_base_test
-
-// 싱글 읽기/쓰기 테스트
-class axi_single_rw_test extends axi_base_test;
-  
-  // UVM 매크로 선언
-  `uvm_component_utils(axi_single_rw_test)
-  
-  // 생성자
-  function new(string name = "axi_single_rw_test", uvm_component parent = null);
-    super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Single Read/Write Test created", UVM_HIGH)
-  endfunction : new
-  
-  // 런 페이즈 - 시퀀스 실행
+  // Run phase
   task run_phase(uvm_phase phase);
-    axi_single_write_sequence write_seq;
-    axi_single_read_sequence read_seq;
+    super.run_phase(phase);
     
-    // 페이즈 타임아웃 설정 - 이것이 중요!
-    phase.raise_objection(this, "Starting Single Read/Write Test");
+    // Base test doesn't start any sequences
+    // Derived tests will override this to start specific sequences
+  endtask
+  
+endclass
+
+// Write test class - tests basic write functionality
+class axi_write_test extends axi_base_test;
+  `uvm_component_utils(axi_write_test)
+  
+  // Sequence
+  axi_write_sequence write_seq;
+  
+  // Constructor
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+  
+  // Run phase
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
     
-    `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
+    // Create and start write sequence
+    write_seq = axi_write_sequence::type_id::create("write_seq");
     
-    // 초기 지연 추가
-    #100;
+    // Configure sequence parameters if needed
+    write_seq.num_transactions = 20;
     
-    // 시퀀스 생성
-    write_seq = axi_single_write_sequence::type_id::create("write_seq");
+    phase.raise_objection(this);
+    `uvm_info("AXI_WRITE_TEST", "Starting write test", UVM_LOW)
     
-    // 명확한 값으로 설정
-    if (!write_seq.randomize() with {
-      start_addr == 32'h1000;
-      write_data == 64'hDEADBEEF_12345678;
-      write_id == 8'h5A;
-    }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    // 쓰기 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
     write_seq.start(env.agent.sequencer);
     
-    // 트랜잭션 완료 대기
-    #500;
-    
-    // 읽기 시퀀스 생성
-    read_seq = axi_single_read_sequence::type_id::create("read_seq");
-    
-    // 같은 주소에서 읽기
-    if (!read_seq.randomize() with {
-      start_addr == 32'h1000;
-      read_id == 8'h5A;
-    }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    // 읽기 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
-    read_seq.start(env.agent.sequencer);
-    
-    // 트랜잭션 완료 대기
-    #500;
-    
-    `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
-    
-    // 최종 지연
-    #100;
-    
-    // 페이즈 타임아웃 해제 - 진짜 모든 작업이 끝난 후에만!
-    phase.drop_objection(this, "Completed Single Read/Write Test");
-  endtask : run_phase
+    `uvm_info("AXI_WRITE_TEST", "Write test completed", UVM_LOW)
+    phase.drop_objection(this);
+  endtask
   
-endclass : axi_single_rw_test
+endclass
 
-// 다중 읽기/쓰기 테스트
-class axi_multiple_rw_test extends axi_base_test;
+// Read test class - tests basic read functionality
+class axi_read_test extends axi_base_test;
+  `uvm_component_utils(axi_read_test)
   
-  // UVM 매크로 선언
-  `uvm_component_utils(axi_multiple_rw_test)
+  // Sequences
+  axi_write_sequence write_seq;
+  axi_read_sequence read_seq;
   
-  // 생성자
-  function new(string name = "axi_multiple_rw_test", uvm_component parent = null);
+  // Constructor
+  function new(string name, uvm_component parent);
     super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Multiple Read/Write Test created", UVM_HIGH)
-  endfunction : new
+  endfunction
   
-  // 런 페이즈 - 시퀀스 실행
+  // Run phase
   task run_phase(uvm_phase phase);
-    axi_multiple_write_sequence write_seq;
-    axi_multiple_read_sequence read_seq;
+    super.run_phase(phase);
     
-    // 페이즈 타임아웃 설정
-    phase.raise_objection(this, "Starting Multiple Read/Write Test");
+    // Create sequences
+    write_seq = axi_write_sequence::type_id::create("write_seq");
+    read_seq = axi_read_sequence::type_id::create("read_seq");
     
-    `uvm_info(get_type_name(), "Starting Multiple Read/Write Test", UVM_MEDIUM)
+    // Configure sequence parameters
+    write_seq.num_transactions = 10;
+    read_seq.num_transactions = 10;
     
-    // 초기 지연
-    #100;
+    phase.raise_objection(this);
+    `uvm_info("AXI_READ_TEST", "Starting read test", UVM_LOW)
     
-    // 시퀀스 생성
-    write_seq = axi_multiple_write_sequence::type_id::create("write_seq");
-    read_seq = axi_multiple_read_sequence::type_id::create("read_seq");
-    
-    // 시퀀스 설정
-    if (!write_seq.randomize() with {
-      start_addr == 32'h2000;
-      num_transactions == 5;  // 5개 트랜잭션으로 제한
-    }) begin
-      `uvm_error(get_type_name(), "Write sequence randomization failed")
-    end
-    
-    // 쓰기 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
+    // First write data, then read it
     write_seq.start(env.agent.sequencer);
-    #1000;  // 충분한 지연
-    
-    // 읽기 시퀀스 설정
-    if (!read_seq.randomize() with {
-      start_addr == 32'h2000;
-      num_transactions == 5;  // 5개 트랜잭션으로 제한
-    }) begin
-      `uvm_error(get_type_name(), "Read sequence randomization failed")
-    end
-    
-    // 읽기 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
-    read_seq.start(env.agent.sequencer);
-    #1000;  // 충분한 지연
-    
-    `uvm_info(get_type_name(), "Completing Multiple Read/Write Test", UVM_MEDIUM)
-    
-    // 최종 지연
-    #100;
-    
-    // 페이즈 타임아웃 해제
-    phase.drop_objection(this, "Completed Multiple Read/Write Test");
-  endtask : run_phase
-  
-endclass : axi_multiple_rw_test
-
-// 메모리 테스트
-class axi_memory_test extends axi_base_test;
-  
-  // UVM 매크로 선언
-  `uvm_component_utils(axi_memory_test)
-  
-  // 생성자
-  function new(string name = "axi_memory_test", uvm_component parent = null);
-    super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Memory Test created", UVM_HIGH)
-  endfunction : new
-  
-  // 런 페이즈 - 시퀀스 실행
-  task run_phase(uvm_phase phase);
-    axi_memory_test_sequence mem_seq;
-    
-    // 페이즈 타임아웃 설정
-    phase.raise_objection(this, "Starting Memory Test");
-    
-    `uvm_info(get_type_name(), "Starting Memory Test", UVM_MEDIUM)
-    
-    // 초기 지연
-    #100;
-    
-    // 시퀀스 생성
-    mem_seq = axi_memory_test_sequence::type_id::create("mem_seq");
-    
-    // 시퀀스 설정
-    if (!mem_seq.randomize() with {
-      start_addr == 32'h3000;
-      num_transactions == 3;  // 3개 트랜잭션으로 제한
-    }) begin
-      `uvm_error(get_type_name(), "Memory sequence randomization failed")
-    end
-    
-    // 메모리 테스트 시퀀스 실행
-    `uvm_info(get_type_name(), "Starting memory test sequence", UVM_MEDIUM)
-    mem_seq.start(env.agent.sequencer);
-    #1500;  // 충분한 지연
-    
-    `uvm_info(get_type_name(), "Completing Memory Test", UVM_MEDIUM)
-    
-    // 최종 지연
-    #100;
-    
-    // 페이즈 타임아웃 해제
-    phase.drop_objection(this, "Completed Memory Test");
-  endtask : run_phase
-  
-endclass : axi_memory_test
-
-// 랜덤 테스트
-class axi_random_test extends axi_base_test;
-  
-  // UVM 매크로 선언
-  `uvm_component_utils(axi_random_test)
-  
-  // 생성자
-  function new(string name = "axi_random_test", uvm_component parent = null);
-    super.new(name, parent);
-    `uvm_info(get_type_name(), "AXI Random Test created", UVM_HIGH)
-  endfunction : new
-  
-  task run_phase(uvm_phase phase);
-    axi_single_write_sequence write_seq;
-    axi_single_read_sequence read_seq;
-    
-    // Raise objection
-    phase.raise_objection(this, "Starting Single Read/Write Test");
-    
-    `uvm_info(get_type_name(), "Starting Single Read/Write Test", UVM_MEDIUM)
-    
-    // Add shorter initial delay
-    #100;
-    
-    // Write sequence
-    write_seq = axi_single_write_sequence::type_id::create("write_seq");
-    
-    // Use clearly visible values
-    if (!write_seq.randomize() with {
-      start_addr == 32'h1000;
-      write_data == 64'hDEADBEEF_12345678;
-      write_id == 8'h5A;
-    }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    `uvm_info(get_type_name(), "Starting write sequence", UVM_MEDIUM)
-    write_seq.start(env.agent.sequencer);
-    
-    // Add a reasonable timeout - don't wait forever
-    #200;
-    
-    `uvm_info(get_type_name(), "Proceeding to read sequence regardless of write completion", UVM_MEDIUM)
-    
-    // Read sequence
-    read_seq = axi_single_read_sequence::type_id::create("read_seq");
-    
-    if (!read_seq.randomize() with {
-      start_addr == 32'h1000;
-      read_id == 8'h5A;
-    }) begin
-      `uvm_error(get_type_name(), "Randomization failed")
-    end
-    
-    `uvm_info(get_type_name(), "Starting read sequence", UVM_MEDIUM)
     read_seq.start(env.agent.sequencer);
     
-    // Add a reasonable timeout - don't wait forever
-    #200;
-    
-    `uvm_info(get_type_name(), "Completing Single Read/Write Test", UVM_MEDIUM)
-    
-    // Final delay
-    #100;
-    
-    // Drop objection to allow test to complete
-    phase.drop_objection(this, "Completed Single Read/Write Test");
-  endtask : run_phase
+    `uvm_info("AXI_READ_TEST", "Read test completed", UVM_LOW)
+    phase.drop_objection(this);
+  endtask
   
-endclass : axi_random_test
+endclass
+
+// Burst test class - tests burst transfers
+class axi_burst_test extends axi_base_test;
+  `uvm_component_utils(axi_burst_test)
+  
+  // Sequences
+  axi_burst_write_sequence burst_write_seq;
+  axi_burst_read_sequence burst_read_seq;
+  
+  // Constructor
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+  
+  // Run phase
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
+    
+    // Create sequences
+    burst_write_seq = axi_burst_write_sequence::type_id::create("burst_write_seq");
+    burst_read_seq = axi_burst_read_sequence::type_id::create("burst_read_seq");
+    
+    // Configure sequence parameters
+    burst_write_seq.num_transactions = 5;
+    burst_write_seq.burst_type_to_test = INCR; // Test incremental bursts
+    
+    burst_read_seq.num_transactions = 5;
+    burst_read_seq.burst_type_to_test = INCR; // Test incremental bursts
+    
+    phase.raise_objection(this);
+    `uvm_info("AXI_BURST_TEST", "Starting burst test with INCR bursts", UVM_LOW)
+    
+    // First write data with bursts, then read it
+    burst_write_seq.start(env.agent.sequencer);
+    burst_read_seq.start(env.agent.sequencer);
+    
+    // Now test WRAP bursts
+    burst_write_seq.burst_type_to_test = WRAP;
+    burst_read_seq.burst_type_to_test = WRAP;
+    
+    `uvm_info("AXI_BURST_TEST", "Starting burst test with WRAP bursts", UVM_LOW)
+    burst_write_seq.start(env.agent.sequencer);
+    burst_read_seq.start(env.agent.sequencer);
+    
+    `uvm_info("AXI_BURST_TEST", "Burst test completed", UVM_LOW)
+    phase.drop_objection(this);
+  endtask
+  
+endclass
+
+// Mixed test class - tests random mixed read/write traffic
+class axi_mixed_test extends axi_base_test;
+  `uvm_component_utils(axi_mixed_test)
+  
+  // Sequence
+  axi_mixed_sequence mixed_seq;
+  
+  // Constructor
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+  
+  // Run phase
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
+    
+    // Create sequence
+    mixed_seq = axi_mixed_sequence::type_id::create("mixed_seq");
+    
+    // Configure sequence parameters
+    mixed_seq.num_transactions = 50;
+    
+    phase.raise_objection(this);
+    `uvm_info("AXI_MIXED_TEST", "Starting mixed read/write test", UVM_LOW)
+    
+    mixed_seq.start(env.agent.sequencer);
+    
+    `uvm_info("AXI_MIXED_TEST", "Mixed test completed", UVM_LOW)
+    phase.drop_objection(this);
+  endtask
+  
+endclass
 
 `endif // AXI_TEST_SVH

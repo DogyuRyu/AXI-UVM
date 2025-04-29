@@ -1,231 +1,241 @@
+//------------------------------------------------------------------------------
+// File: axi_monitor.svh
+// Description: AXI Monitor for UVM testbench
+//------------------------------------------------------------------------------
+
 `ifndef AXI_MONITOR_SVH
 `define AXI_MONITOR_SVH
 
-// AXI Monitor Class
-// Observes and analyzes transactions on the AXI interface
 class axi_monitor extends uvm_monitor;
-  
-  // UVM macro declaration
   `uvm_component_utils(axi_monitor)
   
-  // Configuration object
-  axi_config cfg;
+  // Virtual interface handle
+  virtual axi_intf vif;
   
-  // Virtual interface - with explicit parameterization
-  virtual AXI4 #(.N(8), .I(8)) vif;
-  
-  // Analysis port - sends transactions to scoreboard
-  uvm_analysis_port #(axi_seq_item) item_collected_port;
-  
-  // Transaction counters
-  int num_collected;
-  int num_read_collected;
-  int num_write_collected;
+  // Analysis ports
+  uvm_analysis_port #(axi_transaction) write_port;
+  uvm_analysis_port #(axi_transaction) read_port;
   
   // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    num_collected = 0;
-    num_read_collected = 0;
-    num_write_collected = 0;
-    item_collected_port = new("item_collected_port", this);
-    `uvm_info(get_type_name(), "AXI Monitor created", UVM_HIGH)
-  endfunction : new
+    write_port = new("write_port", this);
+    read_port = new("read_port", this);
+  endfunction
   
-  // Build phase - get configuration object
+  // Build phase - get interface handle
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // Get configuration object
-    if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
-      `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
-      cfg = axi_config::type_id::create("default_cfg");
-    end
-    
-    // Get virtual interface - with explicit parameterization
-    if (!uvm_config_db#(virtual AXI4 #(.N(8), .I(8)))::get(this, "", "vif", vif)) begin
-      `uvm_fatal(get_type_name(), "Virtual interface not found")
-    end
-    
-    `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
-  endfunction : build_phase
+    // Get virtual interface from config DB
+    if(!uvm_config_db#(virtual axi_intf)::get(this, "", "vif", vif))
+      `uvm_fatal("AXI_MONITOR", "Virtual interface must be set for monitor!")
+  endfunction
   
-  // Run phase - start transaction monitoring
-  task run_phase(uvm_phase phase);
-    axi_seq_item read_trans[$];  // Queue of in-progress read transactions
-    axi_seq_item write_trans[$]; // Queue of in-progress write transactions
+  // Run phase - main monitor process
+  virtual task run_phase(uvm_phase phase);
+    `uvm_info("AXI_MONITOR", "Monitor starting...", UVM_MEDIUM)
     
-    `uvm_info(get_type_name(), "Run phase started", UVM_MEDIUM)
-    
-    // Monitor all channels in parallel
     fork
-      // Monitor read address channel
-      monitor_ar_channel(read_trans);
-      
-      // Monitor read data channel
-      monitor_r_channel(read_trans);
-      
-      // Monitor write address channel
-      monitor_aw_channel(write_trans);
-      
-      // Monitor write data channel
-      monitor_w_channel(write_trans);
-      
-      // Monitor write response channel
-      monitor_b_channel(write_trans);
-      
-      // Monitor reset
-      monitor_reset();
+      monitor_write_transactions();
+      monitor_read_transactions();
     join
-  endtask : run_phase
+  endtask
   
-  // Monitor read address channel
-  task monitor_ar_channel(ref axi_seq_item read_trans[$]);
-    axi_seq_item tr;
+  // Monitor write transactions
+  virtual task monitor_write_transactions();
+    axi_transaction write_trans;
+    bit [7:0] data_beat_count;
+    int unsigned data_index;
     
     forever begin
-      @(posedge vif.ACLK);
-      
-      if (vif.ARVALID && vif.ARREADY) begin
-        // Create new read transaction
-        tr = axi_seq_item::type_id::create("tr");
-        tr.addr = vif.ARADDR;
-        tr.id = vif.ARID;
-        tr.is_write = 0;  // Read transaction
+      // Wait for AWVALID and AWREADY handshake
+      @(vif.mon_cb);
+      if(vif.mon_cb.AWVALID && vif.mon_cb.AWREADY) begin
+        // Create transaction
+        write_trans = axi_transaction::type_id::create("write_trans");
+        write_trans.trans_type = axi_transaction::WRITE;
         
-        `uvm_info(get_type_name(), $sformatf("Detected read transaction: addr=0x%0h, id=0x%0h", 
-                                           tr.addr, tr.id), UVM_HIGH)
+        // Capture address phase signals
+        write_trans.id = vif.mon_cb.AWID;
+        write_trans.addr = vif.mon_cb.AWADDR;
+        write_trans.burst_len = vif.mon_cb.AWLEN;
+        write_trans.burst_size = vif.mon_cb.AWSIZE;
+        write_trans.burst_type = axi_burst_type_e'(vif.mon_cb.AWBURST);
+        write_trans.lock = vif.mon_cb.AWLOCK;
+        write_trans.cache = vif.mon_cb.AWCACHE;
+        write_trans.prot = vif.mon_cb.AWPROT;
         
-        // Add to read transaction queue
-        read_trans.push_back(tr);
-      end
-    end
-  endtask : monitor_ar_channel
-  
-  // Monitor read data channel
-  task monitor_r_channel(ref axi_seq_item read_trans[$]);
-    int i;
-    
-    forever begin
-      @(posedge vif.ACLK);
-      
-      if (vif.RVALID && vif.RREADY) begin
-        // Find the corresponding read transaction by ID
-        for (i = 0; i < read_trans.size(); i++) begin
-          if (read_trans[i].id == vif.RID) begin
-            read_trans[i].rdata = vif.RDATA;
-            read_trans[i].resp = vif.RRESP;
-            
-            `uvm_info(get_type_name(), $sformatf("Completed read transaction: addr=0x%0h, data=0x%0h, resp=0x%0h", 
-                                               read_trans[i].addr, read_trans[i].rdata, read_trans[i].resp), UVM_HIGH)
-            
-            // Transaction complete - send to analysis port
-            if (vif.RLAST) begin
-              item_collected_port.write(read_trans[i]);
-              num_collected++;
-              num_read_collected++;
-              read_trans.delete(i);
+        // Allocate arrays based on burst length
+        write_trans.data = new[write_trans.burst_len + 1];
+        write_trans.strb = new[write_trans.burst_len + 1];
+        write_trans.resp = new[1]; // Only one response for write
+        
+        // Reset data beat counter
+        data_beat_count = 0;
+        data_index = 0;
+        
+        // Monitor data phase
+        fork : write_data_phase
+          // Timeout process
+          begin
+            repeat(1000) @(vif.mon_cb);
+            `uvm_error("AXI_MONITOR", "Timeout waiting for write data phase")
+            disable write_data_phase;
+          end
+          
+          // Data collection process
+          begin
+            // Loop for each data beat
+            while(data_beat_count <= write_trans.burst_len) begin
+              @(vif.mon_cb);
+              if(vif.mon_cb.WVALID && vif.mon_cb.WREADY) begin
+                // Capture data
+                write_trans.data[data_index] = vif.mon_cb.WDATA;
+                write_trans.strb[data_index] = vif.mon_cb.WSTRB;
+                
+                // Check WLAST
+                if(data_beat_count == write_trans.burst_len) begin
+                  if(!vif.mon_cb.WLAST)
+                    `uvm_error("AXI_MONITOR", "WLAST not asserted on last data beat")
+                end
+                else if(vif.mon_cb.WLAST) begin
+                  `uvm_warning("AXI_MONITOR", "WLAST asserted before last data beat")
+                  data_beat_count = write_trans.burst_len; // Adjust to match reality
+                end
+                
+                data_beat_count++;
+                data_index++;
+              end
+              
+              // Exit loop when all data beats are captured
+              if(data_beat_count > write_trans.burst_len) break;
             end
             
-            break;
+            disable write_data_phase;
           end
-        end
-      end
-    end
-  endtask : monitor_r_channel
-  
-  // Monitor write address channel
-  task monitor_aw_channel(ref axi_seq_item write_trans[$]);
-    axi_seq_item tr;
-    
-    forever begin
-      @(posedge vif.ACLK);
-      
-      if (vif.AWVALID && vif.AWREADY) begin
-        // Create new write transaction
-        tr = axi_seq_item::type_id::create("tr");
-        tr.addr = vif.AWADDR;
-        tr.id = vif.AWID;
-        tr.is_write = 1;  // Write transaction
+        join
         
-        `uvm_info(get_type_name(), $sformatf("Detected write transaction: addr=0x%0h, id=0x%0h", 
-                                           tr.addr, tr.id), UVM_HIGH)
-        
-        // Add to write transaction queue
-        write_trans.push_back(tr);
-      end
-    end
-  endtask : monitor_aw_channel
-  
-  // Monitor write data channel
-  task monitor_w_channel(ref axi_seq_item write_trans[$]);
-    int i;
-    
-    forever begin
-      @(posedge vif.ACLK);
-      
-      if (vif.WVALID && vif.WREADY) begin
-        // Add data to in-progress write transaction
-        if (write_trans.size() > 0) begin
-          i = write_trans.size() - 1; // Most recent transaction
-          write_trans[i].data = vif.WDATA;
-          write_trans[i].strb = vif.WSTRB;
+        // Monitor response phase
+        fork : write_resp_phase
+          // Timeout process
+          begin
+            repeat(1000) @(vif.mon_cb);
+            `uvm_error("AXI_MONITOR", "Timeout waiting for write response phase")
+            disable write_resp_phase;
+          end
           
-          `uvm_info(get_type_name(), $sformatf("Write data: data=0x%0h, strb=0x%0h", 
-                                             write_trans[i].data, write_trans[i].strb), UVM_HIGH)
-        end
+          // Response collection process
+          begin
+            @(vif.mon_cb);
+            while(!(vif.mon_cb.BVALID && vif.mon_cb.BREADY)) @(vif.mon_cb);
+            
+            // Capture response
+            write_trans.resp[0] = vif.mon_cb.BRESP;
+            
+            // Check ID
+            if(write_trans.id != vif.mon_cb.BID)
+              `uvm_error("AXI_MONITOR", $sformatf("Write response ID mismatch: Expected %0h, Got %0h", 
+                         write_trans.id, vif.mon_cb.BID))
+            
+            disable write_resp_phase;
+          end
+        join
+        
+        // Write complete transaction to analysis port
+        write_port.write(write_trans);
+        `uvm_info("AXI_MONITOR", $sformatf("Captured write transaction: %s", write_trans.convert2string()), UVM_HIGH)
       end
     end
-  endtask : monitor_w_channel
+  endtask
   
-  // Monitor write response channel
-  task monitor_b_channel(ref axi_seq_item write_trans[$]);
-    int i;
+  // Monitor read transactions
+  virtual task monitor_read_transactions();
+    axi_transaction read_trans;
+    bit [7:0] data_beat_count;
+    int unsigned data_index;
     
     forever begin
-      @(posedge vif.ACLK);
-      
-      if (vif.BVALID && vif.BREADY) begin
-        // Find the corresponding write transaction by ID
-        for (i = 0; i < write_trans.size(); i++) begin
-          if (write_trans[i].id == vif.BID) begin
-            write_trans[i].resp = vif.BRESP;
-            
-            `uvm_info(get_type_name(), $sformatf("Completed write transaction: addr=0x%0h, data=0x%0h, resp=0x%0h", 
-                                               write_trans[i].addr, write_trans[i].data, write_trans[i].resp), UVM_HIGH)
-            
-            // Transaction complete - send to analysis port
-            item_collected_port.write(write_trans[i]);
-            num_collected++;
-            num_write_collected++;
-            write_trans.delete(i);
-            
-            break;
+      // Wait for ARVALID and ARREADY handshake
+      @(vif.mon_cb);
+      if(vif.mon_cb.ARVALID && vif.mon_cb.ARREADY) begin
+        // Create transaction
+        read_trans = axi_transaction::type_id::create("read_trans");
+        read_trans.trans_type = axi_transaction::READ;
+        
+        // Capture address phase signals
+        read_trans.id = vif.mon_cb.ARID;
+        read_trans.addr = vif.mon_cb.ARADDR;
+        read_trans.burst_len = vif.mon_cb.ARLEN;
+        read_trans.burst_size = vif.mon_cb.ARSIZE;
+        read_trans.burst_type = axi_burst_type_e'(vif.mon_cb.ARBURST);
+        read_trans.lock = vif.mon_cb.ARLOCK;
+        read_trans.cache = vif.mon_cb.ARCACHE;
+        read_trans.prot = vif.mon_cb.ARPROT;
+        
+        // Allocate arrays based on burst length
+        read_trans.data = new[read_trans.burst_len + 1];
+        read_trans.resp = new[read_trans.burst_len + 1];
+        read_trans.last = new[read_trans.burst_len + 1];
+        
+        // Reset data beat counter
+        data_beat_count = 0;
+        data_index = 0;
+        
+        // Monitor data phase
+        fork : read_data_phase
+          // Timeout process
+          begin
+            repeat(1000) @(vif.mon_cb);
+            `uvm_error("AXI_MONITOR", "Timeout waiting for read data phase")
+            disable read_data_phase;
           end
-        end
+          
+          // Data collection process
+          begin
+            // Loop for each data beat
+            while(data_beat_count <= read_trans.burst_len) begin
+              @(vif.mon_cb);
+              if(vif.mon_cb.RVALID && vif.mon_cb.RREADY) begin
+                // Capture data and response
+                read_trans.data[data_index] = vif.mon_cb.RDATA;
+                read_trans.resp[data_index] = vif.mon_cb.RRESP;
+                read_trans.last[data_index] = vif.mon_cb.RLAST;
+                
+                // Check RID
+                if(read_trans.id != vif.mon_cb.RID)
+                  `uvm_error("AXI_MONITOR", $sformatf("Read data ID mismatch: Expected %0h, Got %0h", 
+                             read_trans.id, vif.mon_cb.RID))
+                
+                // Check RLAST
+                if(data_beat_count == read_trans.burst_len) begin
+                  if(!vif.mon_cb.RLAST)
+                    `uvm_error("AXI_MONITOR", "RLAST not asserted on last data beat")
+                end
+                else if(vif.mon_cb.RLAST) begin
+                  `uvm_warning("AXI_MONITOR", "RLAST asserted before last data beat")
+                  data_beat_count = read_trans.burst_len; // Adjust to match reality
+                end
+                
+                data_beat_count++;
+                data_index++;
+              end
+              
+              // Exit loop when all data beats are captured
+              if(data_beat_count > read_trans.burst_len) break;
+            end
+            
+            disable read_data_phase;
+          end
+        join
+        
+        // Write complete transaction to analysis port
+        read_port.write(read_trans);
+        `uvm_info("AXI_MONITOR", $sformatf("Captured read transaction: %s", read_trans.convert2string()), UVM_HIGH)
       end
     end
-  endtask : monitor_b_channel
+  endtask
   
-  // Monitor reset
-  task monitor_reset();
-    forever begin
-      @(negedge vif.ARESETn);
-      `uvm_info(get_type_name(), "Reset detected", UVM_MEDIUM)
-      
-      // Wait during reset
-      wait(vif.ARESETn);
-      `uvm_info(get_type_name(), "Reset released", UVM_MEDIUM)
-    end
-  endtask : monitor_reset
-  
-  // Report phase - output monitor statistics
-  function void report_phase(uvm_phase phase);
-    super.report_phase(phase);
-    `uvm_info(get_type_name(), $sformatf("Report: Monitor collected %0d transactions (%0d reads, %0d writes)", 
-                                       num_collected, num_read_collected, num_write_collected), UVM_LOW)
-  endfunction : report_phase
-  
-endclass : axi_monitor
+endclass
 
 `endif // AXI_MONITOR_SVH

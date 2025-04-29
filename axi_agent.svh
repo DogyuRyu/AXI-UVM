@@ -1,75 +1,70 @@
+//------------------------------------------------------------------------------
+// File: axi_agent.svh
+// Description: AXI Agent for UVM testbench
+//------------------------------------------------------------------------------
+
 `ifndef AXI_AGENT_SVH
 `define AXI_AGENT_SVH
 
-// AXI Agent Class
-// Contains driver, sequencer, and monitor for the AXI UVM environment
 class axi_agent extends uvm_agent;
-  
-  // UVM macro declaration
   `uvm_component_utils(axi_agent)
   
-  // Configuration object
-  axi_config cfg;
+  // Agent components
+  axi_sequencer      sequencer;
+  axi_driver         driver;
+  axi_monitor        monitor;
   
-  // Sequencer, driver, monitor declaration
-  axi_sequencer sequencer;
-  axi_driver    driver;
-  axi_monitor   monitor;
+  // Configuration
+  uvm_active_passive_enum is_active = UVM_ACTIVE;
   
-  // TLM port - send transactions to scoreboard
-  uvm_analysis_port #(axi_seq_item) analysis_port;
+  // Analysis port
+  uvm_analysis_port #(axi_transaction) write_port;
+  uvm_analysis_port #(axi_transaction) read_port;
   
   // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    analysis_port = new("analysis_port", this);
-    `uvm_info(get_type_name(), "AXI Agent created", UVM_HIGH)
-  endfunction : new
+  endfunction
   
-  // Build phase - create components
+  // Build phase
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     
-    // Get configuration object
-    if (!uvm_config_db#(axi_config)::get(this, "", "cfg", cfg)) begin
-      `uvm_warning(get_type_name(), "No configuration object found, using default configuration")
-      cfg = axi_config::type_id::create("default_cfg");
-    end
-    
-    // Create sequencer, driver, monitor
-    sequencer = axi_sequencer::type_id::create("sequencer", this);
-    driver = axi_driver::type_id::create("driver", this);
+    // Create the monitor (always present)
     monitor = axi_monitor::type_id::create("monitor", this);
     
-    // Pass configuration object
-    uvm_config_db#(axi_config)::set(this, "sequencer", "cfg", cfg);
-    uvm_config_db#(axi_config)::set(this, "driver", "cfg", cfg);
-    uvm_config_db#(axi_config)::set(this, "monitor", "cfg", cfg);
+    // Create analysis ports
+    write_port = new("write_port", this);
+    read_port = new("read_port", this);
     
-    `uvm_info(get_type_name(), "Build phase completed", UVM_HIGH)
-  endfunction : build_phase
+    // Create sequencer and driver if active
+    if(is_active == UVM_ACTIVE) begin
+      sequencer = axi_sequencer::type_id::create("sequencer", this);
+      driver = axi_driver::type_id::create("driver", this);
+    end
+  endfunction
   
-  // Connect phase - connect components
+  // Connect phase
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     
-    // Connect driver and sequencer
-    driver.seq_item_port.connect(sequencer.seq_item_export);
+    // Connect monitor ports to agent ports
+    monitor.write_port.connect(write_port);
+    monitor.read_port.connect(read_port);
     
-    // Connect monitor to analysis port (for scoreboard)
-    monitor.item_collected_port.connect(analysis_port);
-    
-    // REMOVE THIS LINE: driver.exp_port = new("exp_port", driver);
-    
-    `uvm_info(get_type_name(), "Connect phase completed", UVM_HIGH)
-  endfunction : connect_phase
+    // Connect driver and sequencer if active
+    if(is_active == UVM_ACTIVE) begin
+      driver.seq_item_port.connect(sequencer.seq_item_export);
+    end
+  endfunction
   
-  // Report phase - output agent statistics
-  function void report_phase(uvm_phase phase);
-    super.report_phase(phase);
-    `uvm_info(get_type_name(), "Report: AXI Agent completed", UVM_LOW)
-  endfunction : report_phase
+  // Run phase
+  task run_phase(uvm_phase phase);
+    super.run_phase(phase);
+    
+    // Agent-specific run phase activities can be added here
+  endtask
   
-endclass : axi_agent
+endclass
 
 `endif // AXI_AGENT_SVH

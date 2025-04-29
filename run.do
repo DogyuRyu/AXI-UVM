@@ -1,11 +1,18 @@
-# run.do - for single simulation
+# run.do - With multiple test options
 
-# Start simulation
-vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_HIGH +UVM_TESTNAME=axi_single_rw_test -t 1ps work.axi_top_tb
+# Test: Basic Write/Read Test (Uncomment to run)
+vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=axi_read_test -t 1ps work.tb_top
+
+# Test: Write-only Test (Uncomment to run)
+# vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=axi_write_test -t 1ps work.tb_top
+
+# Test: Burst Transfers Test (Uncomment to run)
+# vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=axi_burst_test -t 1ps work.tb_top
+
+# Test: Mixed Read/Write Test (Uncomment to run)
+# vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=axi_mixed_test -t 1ps work.tb_top
 
 # Optional logging
-set StdArithNoWarnings 1
-set NumericStdNoWarnings 1
 log -r /*
 
 # Run simulation

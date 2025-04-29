@@ -1,28 +1,23 @@
-# compile.do - Updated with +acc options
+# compile.do - Simplified version
 
-# Delete previous compiled files
+# Delete previous compiled files and create library
 if {[file exists work]} {
   vdel -all
 }
-
-# Create library
 vlib work
 
-# Compile interfaces and BFM related files with +acc option
+# Compile all files
 vlog -sv +acc=npr interfaces.sv
-vlog -sv +acc=npr Axi4Types.sv
-vlog -sv +acc=npr Axi4.sv
-vlog -sv +acc=npr Axi4Agents.sv
-vlog -sv +acc=npr Axi4Drivers.sv
-vlog -sv +acc=npr Axi4BFMs.sv
-
-# Compile interface adapter
-vlog -sv +acc=npr axi_interface_adapter.sv
-
-# Compile DUT
+vlog -sv +acc=npr axi_transactions.svh
+vlog -sv +acc=npr axi_sequences.svh
+vlog -sv +acc=npr axi_sequencer.svh
+vlog -sv +acc=npr axi_driver.svh
+vlog -sv +acc=npr axi_monitor.svh
+vlog -sv +acc=npr axi_scoreboard.svh
+vlog -sv +acc=npr axi_agent.svh
+vlog -sv +acc=npr axi_env.svh
+vlog -sv +acc=npr axi_test.svh
 vlog -sv +acc=npr axi_slave.v
-
-# Compile UVM testbench
-vlog -sv +acc=npr axi_top_tb.sv
+vlog -sv +acc=npr tb_top.sv
 
 echo "Compilation completed"
