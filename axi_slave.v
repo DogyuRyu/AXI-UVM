@@ -183,40 +183,40 @@ always @* begin
                 write_state_next = WRITE_STATE_IDLE;
             end
         end
-    WRITE_STATE_BURST: begin
-        // Always assert WREADY in BURST state
-        s_axi_wready_next = 1'b1;
+        WRITE_STATE_BURST: begin
+            // Always assert WREADY in BURST state
+            s_axi_wready_next = 1'b1;
 
-        if (s_axi_wready && s_axi_wvalid) begin
-            mem_wr_en = 1'b1;
-            
-            // For FIXED bursts, address remains the same
-            if (write_burst_reg != 2'b00) begin
-                write_addr_next = write_addr_reg + (1 << write_size_reg);
-            end
-            
-            // Check if this is the last beat (either by WLAST or counter)
-            if (s_axi_wlast) begin
-                // Move to response phase when WLAST is received
-                write_count_next = 0;
+            if (s_axi_wready && s_axi_wvalid) begin
+                mem_wr_en = 1'b1;
                 
-                if (s_axi_bready || !s_axi_bvalid) begin
-                    s_axi_bid_next = write_id_reg;
-                    s_axi_bvalid_next = 1'b1;
-                    s_axi_awready_next = 1'b1;
-                    write_state_next = WRITE_STATE_IDLE;
+                // For FIXED bursts, address remains the same
+                if (write_burst_reg != 2'b00) begin
+                    write_addr_next = write_addr_reg + (1 << write_size_reg);
+                end
+                
+                // Check if this is the last beat (either by WLAST or counter)
+                if (s_axi_wlast) begin
+                    // Move to response phase when WLAST is received
+                    write_count_next = 0;
+                    
+                    if (s_axi_bready || !s_axi_bvalid) begin
+                        s_axi_bid_next = write_id_reg;
+                        s_axi_bvalid_next = 1'b1;
+                        s_axi_awready_next = 1'b1;
+                        write_state_next = WRITE_STATE_IDLE;
+                    end else begin
+                        write_state_next = WRITE_STATE_RESP;
+                    end
                 end else begin
-                    write_state_next = WRITE_STATE_RESP;
+                    // Not the last beat
+                    write_count_next = write_count_reg - 1;
+                    write_state_next = WRITE_STATE_BURST;
                 end
             end else begin
-                // Not the last beat
-                write_count_next = write_count_reg - 1;
                 write_state_next = WRITE_STATE_BURST;
             end
-        end else begin
-            write_state_next = WRITE_STATE_BURST;
         end
-    end
         WRITE_STATE_RESP: begin
             if (s_axi_bready || !s_axi_bvalid) begin
                 s_axi_bid_next = write_id_reg;
