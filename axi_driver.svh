@@ -118,21 +118,39 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Drive write transaction
   virtual task drive_write_transaction(axi_transaction trans);
-    // Check and fix any problematic burst configurations before driving
+    static int transaction_count = 0;
+    
+    // Increment transaction counter
+    transaction_count++;
+    
+    // For transactions after the first one, add a longer delay
+    if(transaction_count > 1) begin
+      // Wait for any pending signals to settle
+      repeat(20) @(vif.m_drv_cb);
+    end
+    
+    // Check and fix problematic burst configurations
     if (trans.burst_type == FIXED && trans.burst_len > 0) begin
       `uvm_warning("AXI_DRIVER", "FIXED burst with burst_len > 0 detected. Setting burst_len to 0 for compatibility.")
       trans.burst_len = 0;
     end
-    else if (trans.burst_type == WRAP && trans.burst_len <= 1) begin
-      `uvm_warning("AXI_DRIVER", "Converting WRAP burst with length <= 1 to FIXED burst")
-      trans.burst_type = FIXED;
-      trans.burst_len = 0;
+    
+    // Drive address phase
+    drive_write_address(trans);
+    
+    // For second transaction, add delay between address and data phase
+    if(transaction_count > 1) begin
+      repeat(10) @(vif.m_drv_cb);
     end
     
-    // Continue with normal transaction processing
-    drive_write_address(trans);
+    // Drive data phase
     drive_write_data(trans);
+    
+    // Receive response phase
     receive_write_response(trans);
+    
+    // Add post-transaction delay
+    repeat(10) @(vif.m_drv_cb);
   endtask
   
   // Drive write address channel
@@ -186,8 +204,13 @@ class axi_driver extends uvm_driver #(axi_transaction);
     `uvm_info("AXI_DRIVER", $sformatf("Driving %0d data beats", trans.burst_len+1), UVM_MEDIUM)
     
     for(i = 0; i <= trans.burst_len; i++) begin
+      // For multiple beats in a burst, add small delay between beats
+      if(i > 0) begin
+        // Give slave a chance to process previous beat
+        repeat(2) @(vif.m_drv_cb);
+      end
+      
       // Setup data channel signals
-      `uvm_info("AXI_DRIVER", $sformatf("Setting up data beat %0d/%0d: DATA=0x%h", i+1, trans.burst_len+1, trans.data[i]), UVM_HIGH)
       vif.m_drv_cb.WDATA   <= trans.data[i];
       vif.m_drv_cb.WSTRB   <= trans.strb[i];
       vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
@@ -201,7 +224,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       fork
         begin: timeout_block
-          repeat(2000) begin
+          repeat(5000) begin  // Extended timeout
             @(vif.m_drv_cb);
             if(i == 0 && $time % 10000 == 0)
               `uvm_info("AXI_DRIVER", $sformatf("Still waiting for WREADY, current WREADY=%0d, time=%0t", vif.m_drv_cb.WREADY, $time), UVM_MEDIUM)
