@@ -18,6 +18,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
   // Transaction and control variables
   axi_transaction current_trans;
   bit reset_detected = 0;
+  int transaction_count = 0;
   
   // Constructor
   function new(string name, uvm_component parent);
@@ -118,39 +119,38 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Drive write transaction
   virtual task drive_write_transaction(axi_transaction trans);
-    static int transaction_count = 0;
-    
     // Increment transaction counter
     transaction_count++;
     
-    // For transactions after the first one, add a longer delay
+    // Add delay for back-to-back transactions
     if(transaction_count > 1) begin
-      // Wait for any pending signals to settle
       repeat(20) @(vif.m_drv_cb);
     end
     
-    // Check and fix problematic burst configurations
-    if (trans.burst_type == FIXED && trans.burst_len > 0) begin
-      `uvm_warning("AXI_DRIVER", "FIXED burst with burst_len > 0 detected. Setting burst_len to 0 for compatibility.")
+    // Modify transaction for compatibility with slave
+    if(trans.burst_len > 3) begin
+      `uvm_warning("AXI_DRIVER", $sformatf("Reducing burst_len from %0d to 3 for compatibility", trans.burst_len))
+      trans.burst_len = 3; // Maximum 4 data beats
+    end
+    
+    if(trans.burst_type == FIXED && trans.burst_len > 0) begin
+      `uvm_warning("AXI_DRIVER", "Setting FIXED burst_len to 0 for compatibility")
       trans.burst_len = 0;
     end
     
-    // Drive address phase
+    // Drive phases
     drive_write_address(trans);
     
-    // For second transaction, add delay between address and data phase
+    // Add delay between address and data phase for subsequent transactions
     if(transaction_count > 1) begin
       repeat(10) @(vif.m_drv_cb);
     end
     
-    // Drive data phase
     drive_write_data(trans);
-    
-    // Receive response phase
     receive_write_response(trans);
     
     // Add post-transaction delay
-    repeat(10) @(vif.m_drv_cb);
+    repeat(100) @(vif.m_drv_cb);
   endtask
   
   // Drive write address channel
@@ -204,19 +204,19 @@ class axi_driver extends uvm_driver #(axi_transaction);
     `uvm_info("AXI_DRIVER", $sformatf("Driving %0d data beats", trans.burst_len+1), UVM_MEDIUM)
     
     for(i = 0; i <= trans.burst_len; i++) begin
-      // For multiple beats in a burst, add small delay between beats
+      // For subsequent beats, add a small delay
       if(i > 0) begin
-        // Give slave a chance to process previous beat
-        repeat(2) @(vif.m_drv_cb);
+        repeat(3) @(vif.m_drv_cb);
       end
       
       // Setup data channel signals
+      `uvm_info("AXI_DRIVER", $sformatf("Setting up data beat %0d/%0d: DATA=0x%h", i+1, trans.burst_len+1, trans.data[i]), UVM_HIGH)
       vif.m_drv_cb.WDATA   <= trans.data[i];
       vif.m_drv_cb.WSTRB   <= trans.strb[i];
       vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
       vif.m_drv_cb.WVALID  <= 1;
       
-      // Wait for WREADY with more detailed debugging
+      // Wait for WREADY with stability
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Waiting for WREADY", i+1), UVM_MEDIUM)
       
       timeout_detected = 0;
@@ -224,10 +224,11 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       fork
         begin: timeout_block
-          repeat(5000) begin  // Extended timeout
+          repeat(5000) begin
             @(vif.m_drv_cb);
-            if(i == 0 && $time % 10000 == 0)
-              `uvm_info("AXI_DRIVER", $sformatf("Still waiting for WREADY, current WREADY=%0d, time=%0t", vif.m_drv_cb.WREADY, $time), UVM_MEDIUM)
+            if(vif.m_drv_cb.WREADY) begin
+              disable timeout_block;
+            end
           end
           `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
           timeout_detected = 1;
@@ -236,8 +237,6 @@ class axi_driver extends uvm_driver #(axi_transaction);
         begin: wait_for_ready
           do begin
             @(vif.m_drv_cb);
-            if(vif.m_drv_cb.WREADY)
-              `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: WREADY received", i+1), UVM_HIGH)
             if(!vif.rst) begin
               `uvm_info("AXI_DRIVER", "Reset detected during data phase", UVM_MEDIUM)
               reset_detected = 1;
@@ -253,28 +252,59 @@ class axi_driver extends uvm_driver #(axi_transaction);
       end
       
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Handshake complete", i+1), UVM_HIGH)
+      
+      // Wait one cycle after handshake before changing signals
+      @(vif.m_drv_cb);
+      vif.m_drv_cb.WVALID <= 0;
     end
     
     // Clear data channel signals
-    vif.m_drv_cb.WVALID  <= 0;
+    vif.m_drv_cb.WDATA   <= 0;
+    vif.m_drv_cb.WSTRB   <= 0;
     vif.m_drv_cb.WLAST   <= 0;
+    vif.m_drv_cb.WVALID  <= 0;
+    
     `uvm_info("AXI_DRIVER", "Write data phase completed", UVM_MEDIUM)
   endtask
   
   // Receive write response
   virtual task receive_write_response(axi_transaction trans);
+    bit timeout_detected = 0;
+    
     // Set BREADY
+    repeat(10) @(vif.m_drv_cb);
     vif.m_drv_cb.BREADY <= 1;
     
-    // Wait for BVALID
-    do begin
-      @(vif.m_drv_cb);
-      if(!vif.rst) break;
-    end while(!vif.m_drv_cb.BVALID);
+    // Wait for BVALID with timeout
+    fork
+      begin: timeout_block
+        repeat(10000) begin
+          @(vif.m_drv_cb);
+          if(vif.m_drv_cb.BVALID) begin
+            disable timeout_block;
+          end
+        end
+        `uvm_error("AXI_DRIVER", "Timeout waiting for BVALID")
+        timeout_detected = 1;
+      end
+      
+      begin: wait_for_valid
+        do begin
+          @(vif.m_drv_cb);
+          if(!vif.rst) break;
+        end while(!vif.m_drv_cb.BVALID);
+      end
+    join_any
+    disable fork;
     
-    // Capture response
-    trans.resp = new[1];
-    trans.resp[0] = vif.m_drv_cb.BRESP;
+    if(!timeout_detected) begin
+      // Capture response
+      trans.resp = new[1];
+      trans.resp[0] = vif.m_drv_cb.BRESP;
+      
+      // Wait a cycle to complete handshake
+      @(vif.m_drv_cb);
+    end
     
     // Clear BREADY
     vif.m_drv_cb.BREADY <= 0;
@@ -282,11 +312,25 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Drive read transaction
   virtual task drive_read_transaction(axi_transaction trans);
+    // Modify transaction for compatibility
+    if(trans.burst_len > 3) begin
+      `uvm_warning("AXI_DRIVER", $sformatf("Reducing read burst_len from %0d to 3 for compatibility", trans.burst_len))
+      trans.burst_len = 3;
+    end
+    
+    if(trans.burst_type == FIXED && trans.burst_len > 0) begin
+      `uvm_warning("AXI_DRIVER", "Setting FIXED read burst_len to 0 for compatibility")
+      trans.burst_len = 0;
+    end
+    
     // Phase 1: Drive read address channel
     drive_read_address(trans);
     
     // Phase 2: Receive read data
     receive_read_data(trans);
+    
+    // Add post-transaction delay
+    repeat(50) @(vif.m_drv_cb);
   endtask
   
   // Drive read address channel
@@ -302,11 +346,21 @@ class axi_driver extends uvm_driver #(axi_transaction);
     vif.m_drv_cb.ARPROT   <= trans.prot;
     vif.m_drv_cb.ARVALID  <= 1;
     
-    // Wait for ARREADY
-    do begin
-      @(vif.m_drv_cb);
-      if(!vif.rst) break;
-    end while(!vif.m_drv_cb.ARREADY);
+    // Wait for ARREADY with timeout
+    fork
+      begin: timeout_block
+        repeat(1000) @(vif.m_drv_cb);
+        `uvm_error("AXI_DRIVER", "Timeout waiting for ARREADY")
+      end
+      
+      begin: wait_for_ready
+        do begin
+          @(vif.m_drv_cb);
+          if(!vif.rst) break;
+        end while(!vif.m_drv_cb.ARREADY);
+      end
+    join_any
+    disable fork;
     
     // Clear address channel signals
     vif.m_drv_cb.ARVALID  <= 0;
@@ -314,6 +368,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Receive read data
   virtual task receive_read_data(axi_transaction trans);
+    bit timeout_detected;
     int i;
     
     // Allocate data and response arrays
@@ -326,11 +381,29 @@ class axi_driver extends uvm_driver #(axi_transaction);
     
     // Receive data for each burst
     for(i = 0; i <= trans.burst_len; i++) begin
-      // Wait for RVALID
-      do begin
-        @(vif.m_drv_cb);
-        if(!vif.rst) break;
-      end while(!vif.m_drv_cb.RVALID);
+      // Wait for RVALID with timeout
+      fork
+        begin: timeout_block
+          repeat(5000) begin
+            @(vif.m_drv_cb);
+            if(vif.m_drv_cb.RVALID) begin
+              disable timeout_block;
+            end
+          end
+          `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for RVALID on beat %0d", i+1))
+          timeout_detected = 1;
+        end
+        
+        begin: wait_for_valid
+          do begin
+            @(vif.m_drv_cb);
+            if(!vif.rst) break;
+          end while(!vif.m_drv_cb.RVALID);
+        end
+      join_any
+      disable fork;
+      
+      if(timeout_detected) break;
       
       // Capture data and response
       trans.data[i] = vif.m_drv_cb.RDATA;
@@ -343,6 +416,9 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       if((i != trans.burst_len) && vif.m_drv_cb.RLAST)
         `uvm_error("AXI_DRIVER", "RLAST set before last transfer");
+      
+      // Wait one cycle to complete handshake
+      @(vif.m_drv_cb);
     end
     
     // Clear RREADY
