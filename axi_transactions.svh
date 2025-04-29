@@ -80,6 +80,9 @@ class axi_transaction extends uvm_sequence_item;
 
   // Burst type specific constraints
   constraint burst_constraints {
+    // Limit maximum burst length for all burst types
+    burst_len <= 15; // Maximum of 16 data beats
+    
     if (burst_type == FIXED) {
       // For FIXED bursts, limit to burst_len=0 (one data beat)
       burst_len == 0;
@@ -92,6 +95,7 @@ class axi_transaction extends uvm_sequence_item;
       (addr % (2**burst_size * (burst_len+1))) == 0;
     }
   }
+
 
   // STRB constraint (applies only to writes)
   constraint strb_constraints {

@@ -56,11 +56,20 @@ class axi_write_sequence extends axi_base_sequence;
         addr >= min_addr;
         addr <= max_addr;
         
-        // Don't set burst_len here, let constraints in transaction handle it
+        // Limit burst length to avoid overwhelming the slave
+        burst_len <= 7;  // Max 8 data beats
+        
+        // Force FIXED bursts to have exactly one data beat
+        if (burst_type == FIXED) {
+          burst_len == 0;
+        }
       });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
+      
+      // Add a delay between transactions to allow the slave to reset internal state
+      #5000;  // 5us delay
       
       `uvm_info("AXI_WRITE_SEQ", "Transaction completed", UVM_HIGH)
     end
