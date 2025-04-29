@@ -208,11 +208,11 @@ always @* begin
                 end else begin
                     write_state_next = WRITE_STATE_RESP;
                 end
-            end else {
+            end else begin
                 // Not the last beat
                 write_count_next = write_count_reg - 1;
                 write_state_next = WRITE_STATE_BURST;
-            }
+            end
         end else begin
             write_state_next = WRITE_STATE_BURST;
         end
