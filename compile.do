@@ -3,13 +3,13 @@ quit -sim
 
 # Delete existing work directory if exists
 if {[file exists work]} {
-  vdel -all
+  vdel -all -lib work
 }
 
 # Create work library
 vlib work
 
-# 컴파일 - Multi-File Compilation Unit 옵션 사용
+# Compile all testbench files using MFCU
 vlog -sv -mfcu +acc=npr +incdir+. -timescale "1ns/1ps" \
   interface.sv \
   transaction.sv \

@@ -6,10 +6,18 @@ class subscriber extends uvm_subscriber#(transaction);
 
    transaction trans;
    uvm_tlm_analysis_fifo#(transaction) mon2scor;
+   
+   // covergroup 정의
+   covergroup axi_cg;
+      cp1:coverpoint awaddr {bins b1={[0:16'hffff]};}
+      cp2:coverpoint araddr {bins b3={[0:16'hffff]};}
+      cp3:coverpoint wdata  {bins b2={[0:32'hffff_ffff]};}
+      cp4:coverpoint rdata  {bins b4={[0:32'hffff_ffff]};}
+   endgroup
 
    function new(string name="agent",uvm_component parent=null);
       super.new(name,parent);
-      axi_cg=new();
+      axi_cg=new(); // covergroup 초기화
    endfunction
 
    function void build_phase(uvm_phase phase);
@@ -42,19 +50,11 @@ class subscriber extends uvm_subscriber#(transaction);
       end
    endtask
 
-   covergroup axi_cg;
-      cp1:coverpoint awaddr {bins b1={[0:16'hffff]};}
-      cp2:coverpoint araddr {bins b3={[0:16'hffff]};}
-      cp3:coverpoint wdata  {bins b2={[0:32'hffff_ffff]};}
-      cp4:coverpoint rdata  {bins b4={[0:32'hffff_ffff]};}
-   endgroup
-
-    function void check_phase(uvm_phase phase);
+   function void check_phase(uvm_phase phase);
       $display("-------------------------------------------------------------");
       `uvm_info("MY_COVERAGE",$sformatf("%0d",axi_cg.get_coverage()),UVM_NONE);
       $display("-------------------------------------------------------------");
    endfunction
-
 
 endclass
 
