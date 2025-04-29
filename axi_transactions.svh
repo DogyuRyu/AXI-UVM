@@ -80,21 +80,22 @@ class axi_transaction extends uvm_sequence_item;
 
   // Burst type specific constraints
   constraint burst_constraints {
-    // Limit burst length for all transaction types
-    burst_len <= 3;  // Maximum 4 data beats
+    // Limit maximum burst length for all burst types
+    burst_len <= 15; // Maximum of 16 data beats
     
     if (burst_type == FIXED) {
-      // For FIXED bursts, only allow one data beat
+      // For FIXED bursts, limit to burst_len=0 (one data beat)
       burst_len == 0;
       // Limit burst_size for stability
       burst_size inside {0, 1, 2};
     }
     else if (burst_type == WRAP) {
-      burst_len inside {1, 3};
+      burst_len inside {1, 3, 7, 15};
       // For WRAP mode, address must be aligned to the boundary
       (addr % (2**burst_size * (burst_len+1))) == 0;
     }
   }
+
 
   // STRB constraint (applies only to writes)
   constraint strb_constraints {
