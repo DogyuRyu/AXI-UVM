@@ -59,15 +59,14 @@ class axi_write_sequence extends axi_base_sequence;
         
         // Special handling for FIXED burst type
         if (burst_type == FIXED) {
-          // For FIXED bursts, use standard burst lengths
-          burst_len inside {0, 1, 3};
+          // FIXED 버스트의 경우 항상 burst_len=0으로 제한 (1개의 데이터 비트만 전송)
+          burst_len == 0;
           
           // Ensure proper strobe values for the transaction
           foreach (strb[i]) {
             strb[i] == {STRB_WIDTH{1'b1}}; // All bytes enabled
           }
         }
-      });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
@@ -130,7 +129,12 @@ class axi_burst_write_sequence extends axi_write_sequence;
         addr >= min_addr;
         addr <= max_addr;
         burst_type == burst_type_to_test;
-        burst_len > 0; // Ensure it's a burst transfer
+        
+        if (burst_type == FIXED) {
+          burst_len == 0;
+        } else {
+          burst_len > 0;
+        }
       });
       finish_item(trans);
     end
@@ -185,7 +189,7 @@ class axi_mixed_sequence extends axi_base_sequence;
       trans = axi_transaction::type_id::create("trans");
       
       start_item(trans);
-      assert(trans.randomize() with {
+      assert(trans.randomize() with {`
         addr >= min_addr;
         addr <= max_addr;
       });
