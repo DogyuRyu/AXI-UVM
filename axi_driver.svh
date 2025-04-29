@@ -204,16 +204,12 @@ class axi_driver extends uvm_driver #(axi_transaction);
     `uvm_info("AXI_DRIVER", $sformatf("Driving %0d data beats", trans.burst_len+1), UVM_MEDIUM)
     
     for(i = 0; i <= trans.burst_len; i++) begin
-      // For multiple beats in a burst, add small delay between beats
-      if(i > 0) begin
-        // Give slave a chance to process previous beat
-        repeat(2) @(vif.m_drv_cb);
-      end
-      
-      // Setup data channel signals
+      // Setup data channel signals before asserting VALID
       vif.m_drv_cb.WDATA   <= trans.data[i];
       vif.m_drv_cb.WSTRB   <= trans.strb[i];
       vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
+      
+      // Now assert VALID after all signals are stable
       vif.m_drv_cb.WVALID  <= 1;
       
       // Wait for WREADY with more detailed debugging
@@ -251,6 +247,12 @@ class axi_driver extends uvm_driver #(axi_transaction);
       if(timeout_detected || reset_detected) begin
         break; // Exit the for loop if timeout or reset occurred
       end
+      
+      // Complete the current beat handshake with one more clock cycle
+      @(vif.m_drv_cb);
+      
+      // Deassert VALID before changing other signals for the next beat
+      vif.m_drv_cb.WVALID <= 0;
       
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Handshake complete", i+1), UVM_HIGH)
     end
