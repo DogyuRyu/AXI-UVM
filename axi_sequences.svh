@@ -39,18 +39,31 @@ class axi_write_sequence extends axi_base_sequence;
   endfunction
   
   virtual task body();
+    `uvm_info("AXI_WRITE_SEQ", $sformatf("Starting write sequence with %0d transactions", num_transactions), UVM_MEDIUM)
+    
     repeat(num_transactions) begin
-      // Create and randomize a transaction
+      `uvm_info("AXI_WRITE_SEQ", "Creating transaction", UVM_HIGH)
+      
+      // 트랜잭션 생성 및 랜덤화
       trans = axi_transaction::type_id::create("trans");
       
+      `uvm_info("AXI_WRITE_SEQ", "Starting transaction", UVM_HIGH)
       start_item(trans);
+      
+      `uvm_info("AXI_WRITE_SEQ", "Randomizing transaction", UVM_HIGH)
       assert(trans.randomize() with {
         trans_type == axi_transaction::WRITE;
         addr >= min_addr;
         addr <= max_addr;
       });
+      
+      `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
       finish_item(trans);
+      
+      `uvm_info("AXI_WRITE_SEQ", "Transaction completed", UVM_HIGH)
     end
+    
+    `uvm_info("AXI_WRITE_SEQ", "Write sequence completed", UVM_MEDIUM)
   endtask
 endclass
 

@@ -22,12 +22,50 @@ module tb_top;
   bit rst;
   
   // Clock generation - 10ns period
-  always #5 clk = ~clk;
+  initial begin
+    clk = 0; // Explicit initial value
+    forever #5 clk = ~clk;
+  end
   
   // Reset generation
   initial begin
     rst = 0; // Active low reset
+    $display("Reset asserted at time %t", $time);
     #20 rst = 1;
+    $display("Reset released at time %t", $time);
+  end
+  
+  // Debug signal monitoring
+  initial begin
+    forever begin
+      @(posedge clk);
+      if (intf.AWVALID && intf.AWREADY)
+        $display("Time %t: Write Address Handshake - AWID=%h, AWADDR=%h, AWLEN=%d", 
+                 $time, intf.AWID, intf.AWADDR, intf.AWLEN);
+      
+      if (intf.WVALID && intf.WREADY)
+        $display("Time %t: Write Data Handshake - WDATA=%h, WLAST=%b", 
+                 $time, intf.WDATA, intf.WLAST);
+      
+      if (intf.BVALID && intf.BREADY)
+        $display("Time %t: Write Response Handshake - BID=%h, BRESP=%h", 
+                 $time, intf.BID, intf.BRESP);
+      
+      if (intf.ARVALID && intf.ARREADY)
+        $display("Time %t: Read Address Handshake - ARID=%h, ARADDR=%h, ARLEN=%d", 
+                 $time, intf.ARID, intf.ARADDR, intf.ARLEN);
+      
+      if (intf.RVALID && intf.RREADY)
+        $display("Time %t: Read Data Handshake - RID=%h, RDATA=%h, RLAST=%b", 
+                 $time, intf.RID, intf.RDATA, intf.RLAST);
+    end
+  end
+  
+  // Timeout mechanism
+  initial begin
+    #1000000; // 1ms timeout
+    $display("ERROR: Simulation timeout at %t", $time);
+    $finish;
   end
   
   // AXI interface instance
@@ -100,7 +138,8 @@ module tb_top;
     // Set virtual interface in config DB
     uvm_config_db#(virtual axi_intf)::set(null, "uvm_test_top", "vif", intf);
     
-    // Run test
+    // Run test with debugging info
+    $display("Starting test: axi_burst_test at time %t", $time);
     run_test("axi_burst_test"); // Or any other test class name
   end
   

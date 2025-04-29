@@ -1,6 +1,6 @@
 # run.do
 
-# Test: basic read/write test
+# Test: basic read test
 vsim -voptargs="+acc" +UVM_VERBOSITY=UVM_MEDIUM +UVM_TESTNAME=axi_read_test -t 1ps work.tb_top
 
 # Test: write only test
