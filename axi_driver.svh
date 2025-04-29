@@ -229,6 +229,12 @@ class axi_driver extends uvm_driver #(axi_transaction);
     vif.m_drv_cb.WLAST   <= 0;
     `uvm_info("AXI_DRIVER", "Write data phase completed", UVM_MEDIUM)
   endtask
+    
+    // Clear data channel signals
+    vif.m_drv_cb.WVALID  <= 0;
+    vif.m_drv_cb.WLAST   <= 0;
+    `uvm_info("AXI_DRIVER", "Write data phase completed", UVM_MEDIUM)
+  endtask
   
   // Receive write response
   virtual task receive_write_response(axi_transaction trans);
