@@ -184,11 +184,13 @@ always @* begin
             end
         end
         WRITE_STATE_BURST: begin
-            // Always keep WREADY high during burst
+            // CRITICAL FIX: Always assert WREADY while in BURST state
             s_axi_wready_next = 1'b1;
 
             if (s_axi_wready && s_axi_wvalid) begin
+                // Memory write enable when valid data is present
                 mem_wr_en = 1'b1;
+                
                 // Only update address for INCR or WRAP burst types
                 if (write_burst_reg != 2'b00) begin
                     write_addr_next = write_addr_reg + (1 << write_size_reg);
@@ -198,31 +200,26 @@ always @* begin
                 write_count_next = write_count_reg - 1;
                 
                 if (write_count_reg > 0) begin
-                    // Continue burst
+                    // More data beats expected
                     write_state_next = WRITE_STATE_BURST;
                 end else begin
-                    // Last beat of burst
+                    // Last beat of burst - check if WLAST is asserted
                     if (s_axi_wlast != 1'b1) begin
-                        // Debug message only, don't halt simulation
-                        $display("AXI Warning: WLAST not set on final data beat");
+                        $display("AXI Warning: WLAST not set on final beat (count=%0d)", write_count_reg);
                     end
                     
-                    // Move to response phase
-                    s_axi_wready_next = 1'b0; // Stop accepting data
-                    
+                    // Go to response phase
                     if (s_axi_bready || !s_axi_bvalid) begin
-                        // Can send response immediately
                         s_axi_bid_next = write_id_reg;
                         s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = 1'b1; // Ready for next transaction
+                        s_axi_awready_next = 1'b1;
                         write_state_next = WRITE_STATE_IDLE;
                     end else begin
-                        // Wait for BREADY
                         write_state_next = WRITE_STATE_RESP;
                     end
                 end
             end else begin
-                // Keep waiting for data
+                // Continue waiting for data with WREADY asserted
                 write_state_next = WRITE_STATE_BURST;
             end
         end

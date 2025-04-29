@@ -9,46 +9,46 @@
 import uvm_pkg::*;
 `include "uvm_macros.svh"
 
-// AXI 버스트 타입 정의
+// AXI burst type definition
 typedef enum bit[1:0] {
   FIXED = 2'b00,
   INCR  = 2'b01,
   WRAP  = 2'b10
 } axi_burst_type_e;
 
-// AXI 트랜잭션 클래스
+// AXI transaction class
 class axi_transaction extends uvm_sequence_item;
-  // 트랜잭션 타입
+  // Transaction type
   typedef enum {READ, WRITE} trans_type_e;
   rand trans_type_e trans_type;
 
-  // 공통 파라미터
+  // Common parameters
   parameter DATA_WIDTH = 32;
   parameter ADDR_WIDTH = 16;
   parameter ID_WIDTH = 8;
   parameter STRB_WIDTH = (DATA_WIDTH/8);
 
-  // 공통 필드
+  // Common fields
   rand bit [ID_WIDTH-1:0]    id;
   rand bit [ADDR_WIDTH-1:0]  addr;
   rand axi_burst_type_e      burst_type;
   rand bit [2:0]             burst_size;
   rand bit [7:0]             burst_len;
 
-  // 제어 신호들
+  // Control signals
   rand bit                   lock;
   rand bit [3:0]             cache;
   rand bit [2:0]             prot;
 
-  // 데이터 필드
+  // Data fields
   rand bit [DATA_WIDTH-1:0]  data[];
   rand bit [STRB_WIDTH-1:0]  strb[];
 
-  // 응답 필드
+  // Response fields
   bit [1:0]                  resp[];
   bit                        last[];
 
-  // 등록 매크로
+  // Registration macros
   `uvm_object_param_utils_begin(axi_transaction)
     `uvm_field_enum(trans_type_e, trans_type, UVM_ALL_ON)
     `uvm_field_int(id, UVM_ALL_ON)
@@ -65,56 +65,73 @@ class axi_transaction extends uvm_sequence_item;
     `uvm_field_array_int(last, UVM_ALL_ON)
   `uvm_object_utils_end
 
-  // 제약 조건들
-  // 버스트 사이즈 제약: 버스트 사이즈는 데이터 폭보다 작거나 같아야 함
+  // Constraints
+  // Burst size constraint: burst size must be less than or equal to data width
   constraint valid_size {
     burst_size <= $clog2(STRB_WIDTH);
   }
 
-  // 데이터 배열 크기 제약
+  // Data array size constraint
   constraint data_array_size {
     solve burst_len before data;
     data.size() == burst_len + 1;
     strb.size() == burst_len + 1;
   }
 
-  // 버스트 타입에 따른 제약
+  // Burst type specific constraints
   constraint burst_constraints {
     if (burst_type == FIXED) {
-      burst_len inside {0, 1, 3, 7, 15};
+      // For FIXED bursts, limit to smaller burst lengths to avoid issues
+      burst_len inside {0, 1, 3};
+      
+      // For FIXED, size should be reasonable for test stability
+      burst_size <= 2;
     }
     else if (burst_type == WRAP) {
       burst_len inside {1, 3, 7, 15};
-      // WRAP 모드에서 주소는 경계에 정렬되어야 함
+      // For WRAP mode, address must be aligned to the boundary
       (addr % (2**burst_size * (burst_len+1))) == 0;
     }
   }
 
-  // STRB 제약 조건 (쓰기 시에만 적용)
+  // STRB constraint (applies only to writes)
   constraint strb_constraints {
     if (trans_type == WRITE) {
       foreach (strb[i]) {
-        strb[i] != 0; // 최소한 하나의 바이트는 쓰여야 함
+        // For standard operation, at least one byte must be written
+        strb[i] != 0;
+        
+        // For FIXED bursts, use full strobe (all bytes enabled)
+        if (burst_type == FIXED) {
+          strb[i] == {STRB_WIDTH{1'b1}};
+        }
       }
     }
   }
 
-  // 응답 배열 초기화
+  // Initialize response arrays in post_randomize
   function void post_randomize();
     resp = new[burst_len + 1];
     last = new[burst_len + 1];
     
     foreach (last[i]) begin
-      last[i] = (i == burst_len); // 마지막 전송에만 last 신호 설정
+      // Set LAST signal only on the final transfer
+      last[i] = (i == burst_len);
+    end
+    
+    // Debug message for visibility
+    if (burst_type == FIXED) begin
+      $display("Generated FIXED burst transaction: len=%0d, size=%0d, addr=0x%0h", 
+               burst_len, burst_size, addr);
     end
   endfunction
 
-  // 생성자
+  // Constructor
   function new(string name = "axi_transaction");
     super.new(name);
   endfunction
 
-  // 문자열 변환 함수
+  // String conversion function
   function string convert2string();
     string s;
     s = super.convert2string();

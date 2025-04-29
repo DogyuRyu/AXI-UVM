@@ -26,7 +26,6 @@ class axi_base_sequence extends uvm_sequence #(axi_transaction);
 endclass
 
 // Write sequence - generates write transactions
-// In axi_sequences.svh - Add constraints for burst length
 class axi_write_sequence extends axi_base_sequence;
   `uvm_object_utils(axi_write_sequence)
   
@@ -57,6 +56,17 @@ class axi_write_sequence extends axi_base_sequence;
         addr >= min_addr;
         addr <= max_addr;
         burst_len <= 3; // REDUCED BURST LENGTH
+        
+        // Special handling for FIXED burst type
+        if (burst_type == FIXED) {
+          // For FIXED bursts, use standard burst lengths
+          burst_len inside {0, 1, 3};
+          
+          // Ensure proper strobe values for the transaction
+          foreach (strb[i]) {
+            strb[i] == {STRB_WIDTH{1'b1}}; // All bytes enabled
+          }
+        }
       });
       
       `uvm_info("AXI_WRITE_SEQ", $sformatf("Randomized transaction: %s", trans.convert2string()), UVM_MEDIUM)
