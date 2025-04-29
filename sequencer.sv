@@ -1,6 +1,9 @@
 `ifndef AXI_SEQUENCER
 `define AXI_SEQUENCER
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class sequencer extends uvm_sequencer#(transaction);
    `uvm_component_utils(sequencer)
 

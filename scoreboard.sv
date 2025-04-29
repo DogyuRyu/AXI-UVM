@@ -1,5 +1,9 @@
 `ifndef AXI_SCOREBOARD
 `define AXI_SCOREBOARD
+
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class scoreboard extends uvm_scoreboard;
    `uvm_component_utils(scoreboard)
   

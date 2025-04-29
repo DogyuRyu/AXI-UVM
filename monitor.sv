@@ -2,6 +2,10 @@
 `define AXI_MONITOR
 
 `define vintf vintf
+
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 //`define vintf vintf.monitor_mp.monitor_cb
 
 class monitor extends uvm_monitor;

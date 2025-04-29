@@ -2,6 +2,8 @@
 `define AXI_DRIVER
 
 `define vif v_intf.driver_mp.driver_cb
+import uvm_pkg::*;
+`include "uvm_macros.svh"
 
 class driver extends uvm_driver#(transaction);
 

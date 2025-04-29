@@ -1,6 +1,9 @@
 `ifndef AXI_SUBSCRIBER
 `define AXI_SUBSCRIBER
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class subscriber extends uvm_subscriber#(transaction);
    `uvm_component_utils(subscriber)
 

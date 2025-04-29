@@ -1,6 +1,9 @@
 `ifndef AXI_TEST
 `define AXI_TEST
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 //===================================================//
 //                  BASE TEST                        //
 //===================================================//

@@ -1,6 +1,9 @@
 `ifndef AXI_TRANSACTION
 `define AXI_TRANSACTION
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class transaction extends uvm_sequence_item;
 
    

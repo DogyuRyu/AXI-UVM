@@ -1,6 +1,9 @@
 `ifndef AXI_SEQUENCE
 `define AXI_SEQUENCE
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class my_sequence extends uvm_sequence#(transaction);
    `uvm_object_utils(my_sequence)
 
