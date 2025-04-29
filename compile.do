@@ -9,19 +9,20 @@ if {[file exists work]} {
 # Create work library
 vlib work
 
-# Compile interface and testbench files
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" interface.sv
-vlog -sv +acc=npr design.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" transaction.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" sequencer.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" driver.sv 
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" monitor.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" agent.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" scoreboard.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" subscriber.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" environment.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" sequence.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" test.sv
-vlog -sv +acc=npr +incdir+. -timescale "1ns/1ps" testbench.sv
+# 컴파일 - Multi-File Compilation Unit 옵션 사용
+vlog -sv -mfcu +acc=npr +incdir+. -timescale "1ns/1ps" \
+  interface.sv \
+  transaction.sv \
+  sequencer.sv \
+  driver.sv \
+  monitor.sv \
+  agent.sv \
+  scoreboard.sv \
+  subscriber.sv \
+  environment.sv \
+  sequence.sv \
+  test.sv \
+  design.sv \
+  testbench.sv
 
 echo "Compilation Completed"
