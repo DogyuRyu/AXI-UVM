@@ -79,22 +79,22 @@ class axi_transaction extends uvm_sequence_item;
   }
 
   // Burst type specific constraints
-  constraint burst_constraints {
+    constraint burst_constraints {
     // Limit maximum burst length for all burst types
     burst_len <= 15; // Maximum of 16 data beats
     
     if (burst_type == FIXED) {
-      // For FIXED bursts, limit to burst_len=0 (one data beat)
-      burst_len == 0;
-      // Limit burst_size for stability
-      burst_size inside {0, 1, 2};
+        // For FIXED bursts, limit to burst_len=0 (one data beat)
+        burst_len == 0;
+        // Limit burst_size for stability
+        burst_size inside {0, 1, 2};
     }
     else if (burst_type == WRAP) {
-      burst_len inside {1, 3, 7, 15};
-      // For WRAP mode, address must be aligned to the boundary
-      (addr % (2**burst_size * (burst_len+1))) == 0;
+        burst_len inside {1, 3, 7, 15};
+        // For WRAP mode, address must be aligned to the boundary
+        (addr % (2**burst_size * (burst_len+1))) == 0;
     }
-  }
+    }
 
 
   // STRB constraint (applies only to writes)
@@ -113,21 +113,15 @@ class axi_transaction extends uvm_sequence_item;
   }
 
   // Initialize response arrays in post_randomize
-  function void post_randomize();
+    function void post_randomize();
     resp = new[burst_len + 1];
     last = new[burst_len + 1];
     
     foreach (last[i]) begin
-      // Set LAST signal only on the final transfer
-      last[i] = (i == burst_len);
+        // Set LAST signal only on the final transfer
+        last[i] = (i == burst_len);
     end
-    
-    // Debug message for visibility
-    if (burst_type == FIXED) begin
-      $display("Generated FIXED burst transaction: len=%0d, size=%0d, addr=0x%0h", 
-               burst_len, burst_size, addr);
-    end
-  endfunction
+    endfunction
 
   // Constructor
   function new(string name = "axi_transaction");

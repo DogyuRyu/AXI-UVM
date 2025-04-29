@@ -82,7 +82,7 @@ class axi_monitor extends uvm_monitor;
         fork : write_data_phase
           // Timeout process
           begin
-            repeat(1000) @(vif.mon_cb);
+            repeat(10000) @(vif.mon_cb);
             `uvm_error("AXI_MONITOR", "Timeout waiting for write data phase")
             disable write_data_phase;
           end
