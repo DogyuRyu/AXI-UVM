@@ -1,11 +1,6 @@
-`resetall
-`timescale 1ns / 1ps
-`default_nettype none
-
-/*
- * AXI4 RAM
- */
-module axi_slave #
+// Code your design here
+//design source GIT HUB
+module axi_dut #
 (
     // Width of data bus in bits
     parameter DATA_WIDTH = 32,
