@@ -107,36 +107,23 @@ class axi_read_test extends axi_base_test;
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
     
-    // Create and configure sequences with smaller transactions
+    // 시퀀스 생성
     write_seq = axi_write_sequence::type_id::create("write_seq");
     read_seq = axi_read_sequence::type_id::create("read_seq");
     
-    // Configure sequence parameters - MUCH SMALLER FOR DEBUGGING
-    write_seq.num_transactions = 1; // Only one transaction
-    read_seq.num_transactions = 1;  // Only one transaction
-    
-    // Add constraints to the sequences for smaller burst size
-    class'(write_seq).set_defaults = function void() {
-      this.min_addr = 0;
-      this.max_addr = 255;
-      this.max_burst_len = 3; // Very small burst length
-    };
-    
-    class'(read_seq).set_defaults = function void() {
-      this.min_addr = 0;
-      this.max_addr = 255;
-      this.max_burst_len = 3; // Very small burst length
-    };
+    // 시퀀스 파라미터 설정
+    write_seq.num_transactions = 2; // 디버깅을 위해 트랜잭션 수 줄임
+    read_seq.num_transactions = 2;  // 디버깅을 위해 트랜잭션 수 줄임
     
     phase.raise_objection(this);
-    `uvm_info("AXI_READ_TEST", "Starting read test with smaller transactions", UVM_LOW)
+    `uvm_info("AXI_READ_TEST", "Starting read test", UVM_LOW)
     
-    // First write data
+    // 먼저 데이터 쓰기
     `uvm_info("AXI_READ_TEST", "Starting write sequence", UVM_LOW)
     write_seq.start(env.agent.sequencer);
     `uvm_info("AXI_READ_TEST", "Write sequence completed", UVM_LOW)
     
-    // Then read data
+    // 그 다음 데이터 읽기
     `uvm_info("AXI_READ_TEST", "Starting read sequence", UVM_LOW)
     read_seq.start(env.agent.sequencer);
     `uvm_info("AXI_READ_TEST", "Read sequence completed", UVM_LOW)
@@ -144,6 +131,7 @@ class axi_read_test extends axi_base_test;
     `uvm_info("AXI_READ_TEST", "Read test completed", UVM_LOW)
     phase.drop_objection(this);
   endtask
+  
 endclass
 
 // Burst test class - tests burst transfers
