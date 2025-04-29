@@ -6,6 +6,9 @@
 `ifndef AXI_TEST_SVH
 `define AXI_TEST_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 // Base test class
 class axi_base_test extends uvm_test;
   `uvm_component_utils(axi_base_test)

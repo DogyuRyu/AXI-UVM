@@ -6,6 +6,9 @@
 `ifndef AXI_TRANSACTIONS_SVH
 `define AXI_TRANSACTIONS_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 // AXI 버스트 타입 정의
 typedef enum bit[1:0] {
   FIXED = 2'b00,

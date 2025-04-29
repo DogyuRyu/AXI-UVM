@@ -6,6 +6,9 @@
 `ifndef AXI_SEQUENCER_SVH
 `define AXI_SEQUENCER_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class axi_sequencer extends uvm_sequencer #(axi_transaction);
   `uvm_component_utils(axi_sequencer)
   

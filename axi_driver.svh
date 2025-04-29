@@ -6,6 +6,9 @@
 `ifndef AXI_DRIVER_SVH
 `define AXI_DRIVER_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class axi_driver extends uvm_driver #(axi_transaction);
   `uvm_component_utils(axi_driver)
   

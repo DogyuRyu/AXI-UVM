@@ -6,6 +6,9 @@
 `ifndef AXI_SEQUENCES_SVH
 `define AXI_SEQUENCES_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 // Base sequence class
 class axi_base_sequence extends uvm_sequence #(axi_transaction);
   `uvm_object_utils(axi_base_sequence)

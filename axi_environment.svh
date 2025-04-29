@@ -6,6 +6,9 @@
 `ifndef AXI_ENV_SVH
 `define AXI_ENV_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class axi_env extends uvm_env;
   `uvm_component_utils(axi_env)
   

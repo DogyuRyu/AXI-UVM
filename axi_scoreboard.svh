@@ -6,6 +6,9 @@
 `ifndef AXI_SCOREBOARD_SVH
 `define AXI_SCOREBOARD_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class axi_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(axi_scoreboard)
   

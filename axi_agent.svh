@@ -6,6 +6,9 @@
 `ifndef AXI_AGENT_SVH
 `define AXI_AGENT_SVH
 
+import uvm_pkg::*;
+`include "uvm_macros.svh"
+
 class axi_agent extends uvm_agent;
   `uvm_component_utils(axi_agent)
   
