@@ -119,11 +119,11 @@ class axi_driver extends uvm_driver #(axi_transaction);
   // Drive write transaction
   virtual task drive_write_transaction(axi_transaction trans);
     // Check and fix any problematic burst configurations before driving
-    if (trans.burst_type == WRAP && trans.burst_len <= 1) {
+    if (trans.burst_type == WRAP && trans.burst_len <= 1) begin
       `uvm_warning("AXI_DRIVER", "Converting WRAP burst with length <= 1 to FIXED burst")
       trans.burst_type = FIXED;
       trans.burst_len = 0;
-    }
+    end
     
     // Continue with normal transaction processing
     drive_write_address(trans);
