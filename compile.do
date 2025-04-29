@@ -9,9 +9,6 @@ if {![file exists work]} {
 # Map work library
 vmap work work
 
-# Compile UVM package
-vlog -sv +incdir+$UVM_HOME/src $UVM_HOME/src/uvm_pkg.sv
-
 # Compile design files
 vlog -sv design.sv
 
