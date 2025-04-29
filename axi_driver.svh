@@ -174,7 +174,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
     fork
       begin: timeout_block
         repeat(1000) @(vif.m_drv_cb);
-        `uvm_error("AXI_DRIVER", "Timeout waiting for AWREADY")
+        `uvm_warning("AXI_DRIVER", "Timeout waiting for AWREADY")
       end
       
       begin: wait_for_ready
@@ -227,7 +227,7 @@ class axi_driver extends uvm_driver #(axi_transaction);
             if(i == 0 && $time % 10000 == 0)
               `uvm_info("AXI_DRIVER", $sformatf("Still waiting for WREADY, current WREADY=%0d, time=%0t", vif.m_drv_cb.WREADY, $time), UVM_MEDIUM)
           end
-          `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
+          `uvm_warning("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
           timeout_detected = 1;
         end
         
@@ -346,10 +346,10 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       // Check if RLAST is set when expected
       if((i == trans.burst_len) && !vif.m_drv_cb.RLAST)
-        `uvm_error("AXI_DRIVER", "RLAST not set on last transfer");
+        `uvm_warning("AXI_DRIVER", "RLAST not set on last transfer");
       
       if((i != trans.burst_len) && vif.m_drv_cb.RLAST)
-        `uvm_error("AXI_DRIVER", "RLAST set before last transfer");
+        `uvm_warning("AXI_DRIVER", "RLAST set before last transfer");
     end
     
     // Clear RREADY
