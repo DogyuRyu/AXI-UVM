@@ -107,6 +107,8 @@ class axi_read_test extends axi_base_test;
   task run_phase(uvm_phase phase);
     super.run_phase(phase);
     
+    axi_transaction trans1, trans2;
+    
     // Create sequences
     write_seq = axi_write_sequence::type_id::create("write_seq");
     read_seq = axi_read_sequence::type_id::create("read_seq");
