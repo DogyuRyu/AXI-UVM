@@ -1,17 +1,21 @@
-# Run compilation if needed
+# 모든 테스트 케이스를 순차적으로 실행하는 스크립트
+
+# 먼저 컴파일
 do compile.do
 
-# Start simulation
-vsim tb_top
+echo "=== Running test_case_1 ==="
+vsim -c -t 1ps -do "run 10us; exit" tb_top +UVM_TESTNAME=test_case_1
 
-# Add waveform
-add wave -position insertpoint sim:/tb_top/intf/*
-add wave -position insertpoint sim:/tb_top/inst/*
+echo "=== Running test_case_2 ==="
+vsim -c -t 1ps -do "run 10us; exit" tb_top +UVM_TESTNAME=test_case_2
 
-# Set radix for viewing signals
-radix -hexadecimal
+echo "=== Running test_case_3 ==="
+vsim -c -t 1ps -do "run 10us; exit" tb_top +UVM_TESTNAME=test_case_3
 
-# Run the simulation for 10us or until completion
-run 10us
+echo "=== Running test_case_4 ==="
+vsim -c -t 1ps -do "run 10us; exit" tb_top +UVM_TESTNAME=test_case_4
 
-echo "Simulation completed"
+echo "=== Running test_case_5 ==="
+vsim -c -t 1ps -do "run 10us; exit" tb_top +UVM_TESTNAME=test_case_5
+
+echo "All tests completed"
