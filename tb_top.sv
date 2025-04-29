@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// File: axi_top_tb.sv
+// File: tb_top.sv
 // Description: AXI Testbench Top Module
 //------------------------------------------------------------------------------
 
@@ -14,7 +14,7 @@
 `include "axi_env.svh"
 `include "axi_test.svh"
 
-module axi_top_tb;
+module tb_top;
   import uvm_pkg::*;
   
   // Clock and reset generation
@@ -107,7 +107,7 @@ module axi_top_tb;
   // Dump waveforms (for simulator support)
   initial begin
     $dumpfile("dump.vcd");
-    $dumpvars(0, axi_top_tb);
+    $dumpvars(0, tb_top);
   end
   
 endmodule
