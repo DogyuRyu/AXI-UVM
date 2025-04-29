@@ -183,46 +183,40 @@ always @* begin
                 write_state_next = WRITE_STATE_IDLE;
             end
         end
-        WRITE_STATE_BURST: begin
-            // CRITICAL FIX: Always assert WREADY while in BURST state
-            s_axi_wready_next = 1'b1;
+    WRITE_STATE_BURST: begin
+        // Always assert WREADY in BURST state
+        s_axi_wready_next = 1'b1;
 
-            if (s_axi_wready && s_axi_wvalid) begin
-                // Memory write enable when valid data is present
-                mem_wr_en = 1'b1;
-                
-                // Only update address for INCR or WRAP burst types
-                if (write_burst_reg != 2'b00) begin
-                    write_addr_next = write_addr_reg + (1 << write_size_reg);
-                end
-                
-                // Decrement burst counter
-                write_count_next = write_count_reg - 1;
-                
-                // FIX HERE: When using >= instead of >, we ensure the last beat is processed
-                if (write_count_reg >= 0) begin
-                    // More data beats expected or last beat in progress
-                    write_state_next = WRITE_STATE_BURST;
-                    // Wait for WLAST to be asserted on the final beat
-                    if (write_count_reg == 0 && s_axi_wlast) begin
-                        // Now transition to response phase
-                        if (s_axi_bready || !s_axi_bvalid) begin
-                            s_axi_wready_next = 1'b0;
-                            s_axi_bid_next = write_id_reg;
-                            s_axi_bvalid_next = 1'b1;
-                            s_axi_awready_next = 1'b1;
-                            write_state_next = WRITE_STATE_IDLE;
-                        end else begin
-                            s_axi_wready_next = 1'b0;
-                            write_state_next = WRITE_STATE_RESP;
-                        end
-                    end
-                end
-            end else begin
-                // Continue waiting for data with WREADY asserted
-                write_state_next = WRITE_STATE_BURST;
+        if (s_axi_wready && s_axi_wvalid) begin
+            mem_wr_en = 1'b1;
+            
+            // For FIXED bursts, address remains the same
+            if (write_burst_reg != 2'b00) begin
+                write_addr_next = write_addr_reg + (1 << write_size_reg);
             end
+            
+            // Check if this is the last beat (either by WLAST or counter)
+            if (s_axi_wlast) begin
+                // Move to response phase when WLAST is received
+                write_count_next = 0;
+                
+                if (s_axi_bready || !s_axi_bvalid) begin
+                    s_axi_bid_next = write_id_reg;
+                    s_axi_bvalid_next = 1'b1;
+                    s_axi_awready_next = 1'b1;
+                    write_state_next = WRITE_STATE_IDLE;
+                end else begin
+                    write_state_next = WRITE_STATE_RESP;
+                end
+            end else {
+                // Not the last beat
+                write_count_next = write_count_reg - 1;
+                write_state_next = WRITE_STATE_BURST;
+            }
+        end else begin
+            write_state_next = WRITE_STATE_BURST;
         end
+    end
         WRITE_STATE_RESP: begin
             if (s_axi_bready || !s_axi_bvalid) begin
                 s_axi_bid_next = write_id_reg;

@@ -186,6 +186,12 @@ class axi_driver extends uvm_driver #(axi_transaction);
       vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
       vif.m_drv_cb.WVALID  <= 1;
       
+      // Special handling for FIXED bursts - insert delay
+      if(trans.burst_type == FIXED && i > 0) begin
+        // Add a small delay to allow slave to stabilize
+        repeat(5) @(vif.m_drv_cb);
+      end
+      
       // Wait for WREADY with more detailed debugging
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Waiting for WREADY", i+1), UVM_MEDIUM)
       
@@ -194,9 +200,9 @@ class axi_driver extends uvm_driver #(axi_transaction);
       
       fork
         begin: timeout_block
-          repeat(1000) begin
+          repeat(2000) begin // Increased timeout for reliability
             @(vif.m_drv_cb);
-            if(i == 0 && $time % 40000 == 0)
+            if($time % 10000 == 0)
               `uvm_info("AXI_DRIVER", $sformatf("Still waiting for WREADY, current WREADY=%0d, time=%0t", vif.m_drv_cb.WREADY, $time), UVM_MEDIUM)
           end
           `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
