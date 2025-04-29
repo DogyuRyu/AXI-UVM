@@ -199,23 +199,23 @@ always @* begin
                 // Decrement burst counter
                 write_count_next = write_count_reg - 1;
                 
-                if (write_count_reg > 0) begin
-                    // More data beats expected
+                // FIX HERE: When using >= instead of >, we ensure the last beat is processed
+                if (write_count_reg >= 0) begin
+                    // More data beats expected or last beat in progress
                     write_state_next = WRITE_STATE_BURST;
-                end else begin
-                    // Last beat of burst - check if WLAST is asserted
-                    if (s_axi_wlast != 1'b1) begin
-                        $display("AXI Warning: WLAST not set on final beat (count=%0d)", write_count_reg);
-                    end
-                    
-                    // Go to response phase
-                    if (s_axi_bready || !s_axi_bvalid) begin
-                        s_axi_bid_next = write_id_reg;
-                        s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = 1'b1;
-                        write_state_next = WRITE_STATE_IDLE;
-                    end else begin
-                        write_state_next = WRITE_STATE_RESP;
+                    // Wait for WLAST to be asserted on the final beat
+                    if (write_count_reg == 0 && s_axi_wlast) begin
+                        // Now transition to response phase
+                        if (s_axi_bready || !s_axi_bvalid) begin
+                            s_axi_wready_next = 1'b0;
+                            s_axi_bid_next = write_id_reg;
+                            s_axi_bvalid_next = 1'b1;
+                            s_axi_awready_next = 1'b1;
+                            write_state_next = WRITE_STATE_IDLE;
+                        end else begin
+                            s_axi_wready_next = 1'b0;
+                            write_state_next = WRITE_STATE_RESP;
+                        }
                     end
                 end
             end else begin
