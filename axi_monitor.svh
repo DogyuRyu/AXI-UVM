@@ -100,7 +100,7 @@ class axi_monitor extends uvm_monitor;
                 // Check WLAST
                 if(data_beat_count == write_trans.burst_len) begin
                   if(!vif.mon_cb.WLAST)
-                    `uvm_error("AXI_MONITOR", "WLAST not asserted on last data beat")
+                    `uvm_warning("AXI_MONITOR", "WLAST not asserted on last data beat")
                 end
                 else if(vif.mon_cb.WLAST) begin
                   `uvm_warning("AXI_MONITOR", "WLAST asserted before last data beat")

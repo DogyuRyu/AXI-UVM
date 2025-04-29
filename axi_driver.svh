@@ -207,7 +207,9 @@ class axi_driver extends uvm_driver #(axi_transaction);
       // Setup data channel signals before asserting VALID
       vif.m_drv_cb.WDATA   <= trans.data[i];
       vif.m_drv_cb.WSTRB   <= trans.strb[i];
-      vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
+      
+      // Critical: Ensure WLAST is properly asserted on the last beat
+      vif.m_drv_cb.WLAST   <= (i == trans.burst_len) ? 1'b1 : 1'b0;
       
       // Now assert VALID after all signals are stable
       vif.m_drv_cb.WVALID  <= 1;
@@ -251,15 +253,18 @@ class axi_driver extends uvm_driver #(axi_transaction);
       // Complete the current beat handshake with one more clock cycle
       @(vif.m_drv_cb);
       
-      // Deassert VALID before changing other signals for the next beat
+      // Deassert VALID only after sampling the current clock edge
       vif.m_drv_cb.WVALID <= 0;
       
       `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Handshake complete", i+1), UVM_HIGH)
     end
     
-    // Clear data channel signals
+    // Clear data channel signals - Ensure all signals are deasserted
     vif.m_drv_cb.WVALID  <= 0;
     vif.m_drv_cb.WLAST   <= 0;
+    vif.m_drv_cb.WDATA   <= 0;
+    vif.m_drv_cb.WSTRB   <= 0;
+    
     `uvm_info("AXI_DRIVER", "Write data phase completed", UVM_MEDIUM)
   endtask
   
