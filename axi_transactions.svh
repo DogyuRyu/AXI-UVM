@@ -79,19 +79,19 @@ class axi_transaction extends uvm_sequence_item;
   }
 
   // Burst type specific constraints
-    constraint burst_constraints {
+  constraint burst_constraints {
     if (burst_type == FIXED) {
-        // FIXED 버스트의 경우 burst_len을 0으로 고정 (1개의 데이터 비트만 전송)
-        burst_len == 0;
-        // 검증을 위한 간단한 burst_size 사용
-        burst_size inside {0, 1, 2};
+      // Force FIXED bursts to have exactly one data beat
+      burst_len == 0;
+      // Control burst size for stability
+      burst_size inside {0, 1, 2};
     }
     else if (burst_type == WRAP) {
-        burst_len inside {1, 3, 7, 15};
-        // WRAP 모드에서 주소 정렬 요구사항 유지
-        (addr % (2**burst_size * (burst_len+1))) == 0;
+      burst_len inside {1, 3, 7, 15};
+      // WRAP mode address alignment requirement
+      (addr % (2**burst_size * (burst_len+1))) == 0;
     }
-    }
+  }
 
   // STRB constraint (applies only to writes)
   constraint strb_constraints {
