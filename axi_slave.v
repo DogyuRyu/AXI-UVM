@@ -184,30 +184,32 @@ always @* begin
             end
         end
         WRITE_STATE_BURST: begin
-            s_axi_wready_next = 1'b1;
+        s_axi_wready_next = 1'b1;
 
-            if (s_axi_wready && s_axi_wvalid) begin
-                mem_wr_en = 1'b1;
-                if (write_burst_reg != 2'b00) begin
-                    write_addr_next = write_addr_reg + (1 << write_size_reg);
-                end
-                write_count_next = write_count_reg - 1;
-                if (write_count_reg > 0) begin
-                    write_state_next = WRITE_STATE_BURST;
-                end else begin
-                    s_axi_wready_next = 1'b0;
-                    if (s_axi_bready || !s_axi_bvalid) begin
-                        s_axi_bid_next = write_id_reg;
-                        s_axi_bvalid_next = 1'b1;
-                        s_axi_awready_next = 1'b1;
-                        write_state_next = WRITE_STATE_IDLE;
-                    end else begin
-                        write_state_next = WRITE_STATE_RESP;
-                    end
-                end
-            end else begin
-                write_state_next = WRITE_STATE_BURST;
+        if (s_axi_wready && s_axi_wvalid) begin
+            mem_wr_en = 1'b1;
+            if (write_burst_reg != 2'b00) begin
+            write_addr_next = write_addr_reg + (1 << write_size_reg);
             end
+            write_count_next = write_count_reg - 1;
+            if (write_count_reg > 0) begin
+            write_state_next = WRITE_STATE_BURST;
+            s_axi_wready_next = 1'b1;
+            end else begin
+            if (s_axi_bready || !s_axi_bvalid) begin
+                s_axi_bid_next = write_id_reg;
+                s_axi_bvalid_next = 1'b1;
+                s_axi_awready_next = 1'b1;
+                s_axi_wready_next = 1'b0;
+                write_state_next = WRITE_STATE_IDLE;
+            end else begin
+                s_axi_wready_next = 1'b0;
+                write_state_next = WRITE_STATE_RESP;
+            end
+            end
+        end else begin
+            write_state_next = WRITE_STATE_BURST;
+        end
         end
         WRITE_STATE_RESP: begin
             if (s_axi_bready || !s_axi_bvalid) begin

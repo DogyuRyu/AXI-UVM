@@ -176,40 +176,34 @@ class axi_driver extends uvm_driver #(axi_transaction);
     
     for(int i = 0; i <= trans.burst_len; i++) begin
       // Setup data channel signals
-      `uvm_info("AXI_DRIVER", $sformatf("Setting up data beat %0d/%0d: DATA=0x%h", i+1, trans.burst_len+1, trans.data[i]), UVM_HIGH)
       vif.m_drv_cb.WDATA   <= trans.data[i];
       vif.m_drv_cb.WSTRB   <= trans.strb[i];
       vif.m_drv_cb.WLAST   <= (i == trans.burst_len);
       vif.m_drv_cb.WVALID  <= 1;
       
-      // Wait for WREADY with more detailed debugging
-      `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Waiting for WREADY", i+1), UVM_MEDIUM)
-      
+      // Wait for WREADY with proper error handling
       fork
         begin: timeout_block
-          repeat(100) begin
+          repeat(1000) begin // Increased timeout
             @(vif.m_drv_cb);
-            if(i == 0 && $time % 40000 == 0)
-              `uvm_info("AXI_DRIVER", $sformatf("Still waiting for WREADY, current WREADY=%0d, time=%0t", vif.m_drv_cb.WREADY, $time), UVM_MEDIUM)
+            if(vif.m_drv_cb.WREADY) disable timeout_block;
           end
           `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
+          // Don't proceed to next beat on timeout, just exit the transaction
+          return;
         end
         
         begin: wait_for_ready
           do begin
             @(vif.m_drv_cb);
-            if(vif.m_drv_cb.WREADY)
-              `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: WREADY received", i+1), UVM_HIGH)
             if(!vif.rst) begin
               `uvm_info("AXI_DRIVER", "Reset detected during data phase", UVM_MEDIUM)
-              break;
+              return; // Exit on reset
             end
           end while(!vif.m_drv_cb.WREADY);
+          disable timeout_block;
         end
-      join_any
-      disable fork;
-      
-      `uvm_info("AXI_DRIVER", $sformatf("Beat %0d: Handshake complete", i+1), UVM_HIGH)
+      join
     end
     
     // Clear data channel signals
