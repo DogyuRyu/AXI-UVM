@@ -174,6 +174,8 @@ class axi_driver extends uvm_driver #(axi_transaction);
     // Send burst data
     `uvm_info("AXI_DRIVER", $sformatf("Driving %0d data beats", trans.burst_len+1), UVM_MEDIUM)
     
+    bit timeout_occurred = 0;
+    
     for(int i = 0; i <= trans.burst_len; i++) begin
       // Setup data channel signals
       vif.m_drv_cb.WDATA   <= trans.data[i];
@@ -182,6 +184,8 @@ class axi_driver extends uvm_driver #(axi_transaction);
       vif.m_drv_cb.WVALID  <= 1;
       
       // Wait for WREADY with proper error handling
+      timeout_occurred = 0;
+      
       fork
         begin: timeout_block
           repeat(1000) begin // Increased timeout
@@ -189,21 +193,27 @@ class axi_driver extends uvm_driver #(axi_transaction);
             if(vif.m_drv_cb.WREADY) disable timeout_block;
           end
           `uvm_error("AXI_DRIVER", $sformatf("Timeout waiting for WREADY on beat %0d", i+1))
-          // Don't proceed to next beat on timeout, just exit the transaction
-          return;
+          timeout_occurred = 1;
         end
         
         begin: wait_for_ready
+          bit reset_detected = 0;
           do begin
             @(vif.m_drv_cb);
             if(!vif.rst) begin
               `uvm_info("AXI_DRIVER", "Reset detected during data phase", UVM_MEDIUM)
-              return; // Exit on reset
+              reset_detected = 1;
+              disable timeout_block;
             end
-          end while(!vif.m_drv_cb.WREADY);
-          disable timeout_block;
+          end while(!vif.m_drv_cb.WREADY && !reset_detected);
         end
-      join
+      join_any
+      disable fork;
+      
+      // Check if we should break out of the loop due to timeout or reset
+      if(timeout_occurred || !vif.rst) begin
+        break;
+      end
     end
     
     // Clear data channel signals
