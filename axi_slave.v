@@ -215,7 +215,7 @@ always @* begin
                         end else begin
                             s_axi_wready_next = 1'b0;
                             write_state_next = WRITE_STATE_RESP;
-                        }
+                        end
                     end
                 end
             end else begin
