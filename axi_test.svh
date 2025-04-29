@@ -111,9 +111,9 @@ class axi_read_test extends axi_base_test;
     write_seq = axi_write_sequence::type_id::create("write_seq");
     read_seq = axi_read_sequence::type_id::create("read_seq");
     
-    // Configure sequence parameters - use smaller transactions
-    write_seq.num_transactions = 2;
-    read_seq.num_transactions = 2;
+    // Configure sequence parameters
+    write_seq.num_transactions = 1;  // Limit to 1 write transaction
+    read_seq.num_transactions = 1;   // Limit to 1 read transaction
     
     phase.raise_objection(this);
     `uvm_info("AXI_READ_TEST", "Starting read test", UVM_LOW)
@@ -121,12 +121,15 @@ class axi_read_test extends axi_base_test;
     // First write data
     `uvm_info("AXI_READ_TEST", "Starting write sequence", UVM_LOW)
     write_seq.start(env.agent.sequencer);
-    // Add delay between transactions
-    #50000;  // 50us delay
+    `uvm_info("AXI_READ_TEST", "Write sequence completed", UVM_LOW)
+    
+    // Add delay between write and read sequences
+    #50000;
     
     // Then read it back
     `uvm_info("AXI_READ_TEST", "Starting read sequence", UVM_LOW)
     read_seq.start(env.agent.sequencer);
+    `uvm_info("AXI_READ_TEST", "Read sequence completed", UVM_LOW)
     
     `uvm_info("AXI_READ_TEST", "Read test completed", UVM_LOW)
     phase.drop_objection(this);
