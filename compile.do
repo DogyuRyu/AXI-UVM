@@ -9,10 +9,6 @@ if {![file exists work]} {
 # Map work library
 vmap work work
 
-# Define SystemVerilog UVM compile options
-set UVM_HOME $env(UVM_HOME)
-set DEFINES "-define UVM_NO_DPI"
-
 # Compile UVM package
 vlog -sv +incdir+$UVM_HOME/src $UVM_HOME/src/uvm_pkg.sv
 
