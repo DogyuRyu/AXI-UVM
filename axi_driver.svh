@@ -118,13 +118,16 @@ class axi_driver extends uvm_driver #(axi_transaction);
   
   // Drive write transaction
   virtual task drive_write_transaction(axi_transaction trans);
-    // Phase 1: Drive write address channel
+    // Check and fix any problematic burst configurations before driving
+    if (trans.burst_type == WRAP && trans.burst_len <= 1) begin
+      `uvm_warning("AXI_DRIVER", "Converting WRAP burst with length <= 1 to FIXED burst")
+      trans.burst_type = FIXED;
+      trans.burst_len = 0;
+    end
+    
+    // Continue with normal transaction processing
     drive_write_address(trans);
-    
-    // Phase 2: Drive write data channel (can overlap with address phase)
     drive_write_data(trans);
-    
-    // Phase 3: Receive write response
     receive_write_response(trans);
   endtask
   
