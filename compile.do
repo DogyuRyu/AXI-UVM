@@ -22,7 +22,7 @@ vlog -sv -mfcu +acc=npr +incdir+. -timescale "1ns/1ps" \
   axi_environment.sv \
   axi_sequence.sv \
   axi_test.sv \
-  axi_design.sv \
+  axi_slave_dut.sv \
   axi_testbench.sv
 
 echo "Compilation Completed"
