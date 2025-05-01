@@ -67,28 +67,28 @@ class scoreboard extends uvm_scoreboard;
          end
 
                 
-        for(int i=0;i<=rmem_addr.size;i++) begin//1
-           for(int j=0;j<wmem_addr.size;j++) begin//2
-              if(rmem_addr[i]==wmem_addr[j]) begin//3
-                  `uvm_info("*** SCOREBOARD SAMPLED ***","",UVM_NONE);
-                  if(rmem_data[i]==wmem_data[j]) begin//4
-                     `uvm_info("*** SCOREBOARD  PASS ***","",UVM_NONE);
+        for(int i=0;i<=rmem_addr.size;i++) begin
+           for(int j=0;j<wmem_addr.size;j++) begin
+              if(rmem_addr[i]==wmem_addr[j]) begin
+                  `uvm_info("SCOREBOARD SAMPLED ","",UVM_NONE);
+                  if(rmem_data[i]==wmem_data[j]) begin
+                     `uvm_info("SCOREBOARD  PASS ","",UVM_NONE);
                      `uvm_info("DATA CHECK",$sformatf("\nwmem_data == %h\n",wmem_data[j]),UVM_HIGH);
                      `uvm_info("DATA CHECK",$sformatf("\nrmem_data == %h\n",rmem_data[i]),UVM_HIGH);
                      `uvm_info("ADDR CHECK",$sformatf("\nwmem_addr == %h\n",wmem_addr[j]),UVM_HIGH);
                      `uvm_info("ADDR CHECK",$sformatf("\nrmem_addr == %h\n",rmem_addr[i]),UVM_HIGH);
-                  end//4
-                  else begin//5
+                  end
+                  else begin
                      `uvm_error("DATA CHECK",$sformatf("wmem_data == %h",wmem_data[j]));
                      `uvm_error("DATA CHECK",$sformatf("rmem_data == %h",rmem_data[i]));
                      `uvm_error("DATA CHECK",$sformatf("wmem_addr == %h",wmem_addr[j]));
                      `uvm_error("DATA CHECK",$sformatf("rmem_addr == %h",rmem_addr[i]));
-                     `uvm_info("** SCOREBOARD FAIL **","",UVM_NONE);
-                  end//5
-               end//3
+                     `uvm_info("SCOREBOARD FAIL ","",UVM_NONE);
+                  end
+               end
                else continue;
-            end//2
-        end//1
+            end
+        end
      end 
    endtask
 

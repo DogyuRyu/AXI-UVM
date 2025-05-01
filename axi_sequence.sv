@@ -268,6 +268,4 @@ class sequence_5 extends my_sequence;
 
 endclass
 
-
-
 `endif

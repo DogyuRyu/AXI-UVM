@@ -6,9 +6,7 @@ module axi_interface_adapter #(
 ) (
   // AXI4 interface (BFM side)
   AXI4 bfm_intf,
-  
-  // AXI3 signals (DUT side)
-  // global signals - inputs from testbench
+
   input                    axi_clk_i,    // Receives clock
   input                    axi_rstn_i,   // Receives reset
   

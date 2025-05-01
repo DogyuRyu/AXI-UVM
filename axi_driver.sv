@@ -27,9 +27,6 @@ class driver extends uvm_driver#(transaction);
 
    endfunction
 
-   //===================================================//
-   //                WRITE ADDREDS BUS                  //
-   //===================================================//
    task write_address(transaction trans);
       `uvm_info("DRIVER - WRITE ADDRESS BUS","",UVM_HIGH);
       @(posedge v_intf.clk);
@@ -48,10 +45,7 @@ class driver extends uvm_driver#(transaction);
       `vif.awaddr     <=     0;
       `vif.awvalid    <=     0;
    endtask
-    
-   //===================================================//
-   //                WRITE DATA BUS                     //
-   //===================================================//
+
    int write_data_count;
    task write_data(transaction trans);
          write_data_count <= 0;
@@ -82,10 +76,6 @@ class driver extends uvm_driver#(transaction);
       `vif.wdata      <=     0;
    endtask
    
-
-   //===================================================//
-   //                WRITE RESPONSE BUS                 //
-   //===================================================//
    task write_response(transaction trans);
       `uvm_info("DRIVER - WRITE RESPONSE BUS","",UVM_HIGH);
       `vif.bready     <=     trans.bready;
@@ -94,9 +84,6 @@ class driver extends uvm_driver#(transaction);
       end
    endtask
 
-   //===================================================//
-   //                READ ADDREDS BUS                   //
-   //===================================================//
    task read_address(transaction trans);
       `uvm_info("DRIVER - READ ADDRESS BUS","",UVM_HIGH);
       `vif.arid       <=     trans.arid;
@@ -117,9 +104,6 @@ class driver extends uvm_driver#(transaction);
       `vif.arvalid    <=     0;
    endtask
 
-   //===================================================//
-   //                READ DATA BUS                      //
-   //===================================================//
    task read_data(transaction trans);
       repeat(trans.arlen+1) begin
          @(posedge v_intf.clk);
@@ -133,11 +117,6 @@ class driver extends uvm_driver#(transaction);
       end
    endtask
    
-
-
-   //===================================================//
-   //                 RESET LOGIC                       //
-   //===================================================//
    task reset_logic;
       `vif.awvalid    <=    0;
       `vif.wvalid     <=    0;
@@ -147,9 +126,6 @@ class driver extends uvm_driver#(transaction);
       //wait(v_intf.reset==0);
    endtask
 
-   //===================================================//
-   //                 DRIVER LOGIC                      //
-   //===================================================//
    task driver_logic(transaction trans);
             write_address(trans);
             write_data(trans);
@@ -158,10 +134,6 @@ class driver extends uvm_driver#(transaction);
             read_data(trans);
    endtask
 
-   
-   //===================================================//
-   //                 RUN PHASE                         //
-   //===================================================//
    task run_phase(uvm_phase phase);
 
       transaction trans;

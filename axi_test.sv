@@ -27,6 +27,7 @@ endclass
 //===================================================//
 //                TEST CASE 1                        //
 //===================================================//
+// incremental burst with equal length of write and read transaction 
 class test_case_1 extends base_test;
    `uvm_component_utils(test_case_1)
 
@@ -53,6 +54,7 @@ endclass
 //===================================================//
 //                TEST CASE 2                        //
 //===================================================//
+// incremental burst with different length of write and read transaction 
 class test_case_2 extends base_test;
    `uvm_component_utils(test_case_2)
 
@@ -79,6 +81,7 @@ endclass
 //===================================================//
 //                TEST CASE 3                        //
 //===================================================//
+// incremental burst with un_aligned addess 
 class test_case_3 extends base_test;
    `uvm_component_utils(test_case_3)
 
@@ -105,6 +108,7 @@ endclass
 //===================================================//
 //                TEST CASE 4                        //
 //===================================================//
+// fixed burst with equal length of write and read transaction
 class test_case_4 extends base_test;
    `uvm_component_utils(test_case_4)
 
@@ -130,6 +134,7 @@ endclass
 //===================================================//
 //                TEST CASE 5                        //
 //===================================================//
+// fixed burst with un_aligned addess 
 class test_case_5 extends base_test;
    `uvm_component_utils(test_case_5)
 
