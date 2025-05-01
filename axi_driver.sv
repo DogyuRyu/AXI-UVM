@@ -27,9 +27,6 @@ class driver extends uvm_driver#(transaction);
 
    endfunction
 
-
-
-   
    //===================================================//
    //                WRITE ADDREDS BUS                  //
    //===================================================//
@@ -52,8 +49,6 @@ class driver extends uvm_driver#(transaction);
       `vif.awvalid    <=     0;
    endtask
     
-
-
    //===================================================//
    //                WRITE DATA BUS                     //
    //===================================================//

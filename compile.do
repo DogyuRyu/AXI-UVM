@@ -11,18 +11,18 @@ vlib work
 
 # Compile all testbench files using MFCU
 vlog -sv -mfcu +acc=npr +incdir+. -timescale "1ns/1ps" \
-  interface.sv \
-  transaction.sv \
-  sequencer.sv \
-  driver.sv \
-  monitor.sv \
-  agent.sv \
-  scoreboard.sv \
-  subscriber.sv \
-  environment.sv \
-  sequence.sv \
-  test.sv \
-  design.sv \
-  testbench.sv
+  axi_interface.sv \
+  axi_transaction.sv \
+  axi_sequencer.sv \
+  axi_driver.sv \
+  axi_monitor.sv \
+  axi_agent.sv \
+  axi_scoreboard.sv \
+  axi_subscriber.sv \
+  axi_environment.sv \
+  axi_sequence.sv \
+  axi_test.sv \
+  axi_design.sv \
+  axi_testbench.sv
 
 echo "Compilation Completed"
